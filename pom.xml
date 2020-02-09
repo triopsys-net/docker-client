@@ -16,7 +16,7 @@
   <url>https://github.com/spotify/docker-client</url>
 
   <scm>
-    <developerConnection>https://github.com/jvanzyl/docker-client.git</developerConnection>
+    <developerConnection>scm:git:https://github.com/jvanzyl/docker-client.git</developerConnection>
     <tag>HEAD</tag>
   </scm>
 
