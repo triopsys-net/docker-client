@@ -15,6 +15,11 @@
   <description>A docker client</description>
   <url>https://github.com/spotify/docker-client</url>
 
+  <scm>
+    <developerConnection>https://github.com/jvanzyl/docker-client.git</developerConnection>
+    <tag>HEAD</tag>
+  </scm>
+
   <licenses>
     <license>
       <name>The Apache Software License, Version 2.0</name>
