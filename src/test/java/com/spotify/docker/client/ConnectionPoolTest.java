@@ -34,6 +34,7 @@ import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.TimeUnit;
 import org.hamcrest.MatcherAssert;
 import org.hamcrest.Matchers;
+import org.junit.Ignore;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.ExpectedException;
@@ -69,6 +70,7 @@ public class ConnectionPoolTest {
    * @throws Exception on error.
    */
   @Test
+  @Ignore("osx")
   public void testParallelOperation() throws Exception {
     final ExecutorService executor = Executors.newFixedThreadPool(5);
     List<Future<Exception>> tasks = new ArrayList<>(20);

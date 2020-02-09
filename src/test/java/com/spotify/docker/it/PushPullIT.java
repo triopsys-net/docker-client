@@ -57,6 +57,7 @@ import javax.ws.rs.NotAuthorizedException;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.BeforeClass;
+import org.junit.Ignore;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.ExpectedException;
@@ -218,6 +219,7 @@ public class PushPullIT {
   }
 
   @Test
+  @Ignore("Tests failing that require auth")
   public void testPushHubPublicImageWithAuth() throws Exception {
     // Push an image to a public repo on Docker Hub and check it succeeds
     final String dockerDirectory = Resources.getResource("dockerDirectory").getPath();
@@ -236,6 +238,7 @@ public class PushPullIT {
   }
 
   @Test
+  @Ignore("Tests failing that require auth")
   public void testPushHubPublicImageWithAuthFromConfig() throws Exception {
     // Push an image to a public repo on Docker Hub and check it succeeds
     final String dockerDirectory = Resources.getResource("dockerDirectory").getPath();
@@ -251,6 +254,7 @@ public class PushPullIT {
   }
 
   @Test
+  @Ignore("Tests failing that require auth")
   public void testPushHubPrivateImageWithAuth() throws Exception {
     // Push an image to a private repo on Docker Hub and check it succeeds
     final String dockerDirectory = Resources.getResource("dockerDirectory").getPath();
@@ -269,6 +273,7 @@ public class PushPullIT {
   }
 
   @Test
+  @Ignore("Tests failing that require auth")
   public void testPullHubPrivateImageWithBadAuth() throws Exception {
     final RegistryAuth badRegistryAuth = RegistryAuth.builder()
         .username(HUB_AUTH_USERNAME2)
@@ -280,6 +285,7 @@ public class PushPullIT {
   }
 
   @Test
+  @Ignore("Tests failing that require auth")
   public void testBuildHubPrivateImageWithAuth() throws Exception {
     final String dockerDirectory = Resources.getResource("dockerDirectoryNeedsAuth").getPath();
     final RegistryAuth registryAuth = RegistryAuth.builder()
@@ -296,6 +302,7 @@ public class PushPullIT {
   }
 
   @Test
+  @Ignore("Tests failing that require auth")
   public void testPullHubPrivateImageWithAuth() throws Exception {
     final RegistryAuth registryAuth = RegistryAuth.builder()
         .username(HUB_AUTH_USERNAME2)
