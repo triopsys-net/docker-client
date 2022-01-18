@@ -7,16 +7,16 @@
     <version>5</version>
   </parent>
 
-  <groupId>ca.vanzyl</groupId>
+  <groupId>com.xenoamess.docker</groupId>
   <artifactId>docker-client</artifactId>
   <version>8.16.2-SNAPSHOT</version>
   <packaging>jar</packaging>
   <name>docker-client</name>
   <description>A docker client</description>
-  <url>https://github.com/spotify/docker-client</url>
+  <url>https://github.com/XenoAmess/docker-client</url>
 
   <scm>
-    <developerConnection>scm:git:https://github.com/jvanzyl/docker-client.git</developerConnection>
+    <developerConnection>scm:git:https://github.com/XenoAmess/docker-client.git</developerConnection>
     <tag>HEAD</tag>
   </scm>
 
@@ -65,13 +65,6 @@
       <email>mattbrown@spotify.com</email>
     </developer>
   </developers>
-
-  <repositories>
-    <repository>
-       <id>jcenter</id>
-       <url>https://jcenter.bintray.com</url>
-    </repository>
-  </repositories>
 
   <dependencies>
     <!--compile deps-->
