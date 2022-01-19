@@ -29,11 +29,14 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.auto.value.AutoValue;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.MoreObjects;
+import com.google.common.io.BaseEncoding;
 import com.spotify.docker.client.DockerConfigReader;
 import java.io.IOException;
+import java.io.UnsupportedEncodingException;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Path;
+import java.util.Base64;
 import javax.annotation.Nullable;
-import org.glassfish.jersey.internal.util.Base64;
 
 /**
  * Represents all the auth info for a particular registry.
@@ -140,10 +143,15 @@ public abstract class RegistryAuth {
         .build();
   }
 
+  private static String decodeAsString(String input) {
+    final byte[] result = BaseEncoding.base64().decode(input);
+    return new String(result, StandardCharsets.US_ASCII);
+  }
+
   /** Construct a Builder based upon the "auth" field of the docker client config file. */
   public static Builder forAuth(final String auth) {
     // split with limit=2 to catch case where password contains a colon
-    final String[] authParams = Base64.decodeAsString(auth).split(":", 2);
+    final String[] authParams = decodeAsString(auth).split(":", 2);
 
     if (authParams.length != 2) {
       return builder();
