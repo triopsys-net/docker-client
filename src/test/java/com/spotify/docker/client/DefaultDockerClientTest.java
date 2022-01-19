@@ -1283,6 +1283,8 @@ public class DefaultDockerClientTest {
       while ((entry = tarStream.getNextTarEntry()) != null) {
         files.add(entry.getName());
       }
+    } catch (Exception e) {
+      e.printStackTrace();
     }
 
     // Check that some common files exist
