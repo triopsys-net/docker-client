@@ -114,6 +114,7 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
+import com.google.common.io.BaseEncoding;
 import com.google.common.io.Resources;
 import com.google.common.util.concurrent.SettableFuture;
 import com.spotify.docker.client.DockerClient.AttachParameter;
@@ -269,7 +270,6 @@ import org.apache.commons.compress.archivers.tar.TarArchiveInputStream;
 import org.apache.http.impl.conn.PoolingHttpClientConnectionManager;
 import org.apache.http.pool.PoolStats;
 import org.glassfish.jersey.apache.connector.ApacheClientProperties;
-import org.glassfish.jersey.internal.util.Base64;
 import org.hamcrest.CustomTypeSafeMatcher;
 import org.hamcrest.Matcher;
 import org.hamcrest.Matchers;
@@ -1283,6 +1283,8 @@ public class DefaultDockerClientTest {
       while ((entry = tarStream.getNextTarEntry()) != null) {
         files.add(entry.getName());
       }
+    } catch (Exception e) {
+      e.printStackTrace();
     }
 
     // Check that some common files exist
@@ -4997,7 +4999,7 @@ public class DefaultDockerClientTest {
     }
     assertThat(sut.listSecrets().size(), equalTo(0));
 
-    final String secretData = Base64.encodeAsString("testdata".getBytes());
+    final String secretData = BaseEncoding.base64().encode("testdata".getBytes());
     
     final Map<String, String> labels = ImmutableMap.of("foo", "bar", "1", "a");
 
@@ -5167,7 +5169,7 @@ public class DefaultDockerClientTest {
     }
     assertThat(sut.listSecrets().size(), equalTo(0));
 
-    final String secretData = Base64.encodeAsString("testdata".getBytes());
+    final String secretData = BaseEncoding.base64().encode("testdata".getBytes());
 
     final Map<String, String> labels = ImmutableMap.of("foo", "bar", "1", "a");
 

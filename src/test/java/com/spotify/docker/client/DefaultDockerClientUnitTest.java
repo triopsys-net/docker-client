@@ -105,7 +105,6 @@ import okhttp3.mockwebserver.RecordedRequest;
 import okio.Buffer;
 
 import org.glassfish.jersey.client.RequestEntityProcessing;
-import org.glassfish.jersey.internal.util.Base64;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Rule;
@@ -769,7 +768,7 @@ public class DefaultDockerClientUnitTest {
 
     final ConfigSpec configSpec = ConfigSpec
         .builder()
-        .data(Base64.encodeAsString("foobar"))
+        .data(BaseEncoding.base64().encode("foobar".getBytes()))
         .name("foo.yaml")
         .build();
 
@@ -849,7 +848,7 @@ public class DefaultDockerClientUnitTest {
 
     final ConfigSpec configSpec = ConfigSpec
         .builder()
-        .data(Base64.encodeAsString("foobar"))
+        .data(BaseEncoding.base64().encode("foobar".getBytes()))
         .name("foo.yaml")
         .build();
 
@@ -871,7 +870,7 @@ public class DefaultDockerClientUnitTest {
 
     final ConfigSpec configSpec = ConfigSpec
         .builder()
-        .data(Base64.encodeAsString("foobar"))
+        .data(BaseEncoding.base64().encode("foobar".getBytes()))
         .name("foo.yaml")
         .build();
 
@@ -891,7 +890,7 @@ public class DefaultDockerClientUnitTest {
 
     final ConfigSpec configSpec = ConfigSpec
         .builder()
-        .data(Base64.encodeAsString("foobar"))
+        .data(BaseEncoding.base64().encode("foobar".getBytes()))
         .name("foo.yaml")
         .build();
 
@@ -1005,7 +1004,7 @@ public class DefaultDockerClientUnitTest {
 
     final ConfigSpec configSpec = ConfigSpec
         .builder()
-        .data(Base64.encodeAsString("foobar"))
+        .data(BaseEncoding.base64().encode("foobar".getBytes()))
         .name("foo.yaml")
         .build();
 
@@ -1025,7 +1024,7 @@ public class DefaultDockerClientUnitTest {
 
     final ConfigSpec configSpec = ConfigSpec
         .builder()
-        .data(Base64.encodeAsString("foobar"))
+        .data(BaseEncoding.base64().encode("foobar".getBytes()))
         .name("foo.yaml")
         .build();
 
