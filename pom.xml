@@ -240,6 +240,12 @@
       <artifactId>hamcrest-pojo</artifactId>
       <version>1.2.0</version>
       <scope>test</scope>
+      <exclusions>
+        <exclusion>
+          <groupId>com.google.auto.value</groupId>
+          <artifactId>auto-value</artifactId>
+        </exclusion>
+      </exclusions>
     </dependency>
   </dependencies>
   <dependencyManagement>
