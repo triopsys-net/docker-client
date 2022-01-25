@@ -9,7 +9,7 @@
 
   <groupId>com.xenoamess.docker</groupId>
   <artifactId>docker-client</artifactId>
-  <version>8.17.2-beta1</version>
+  <version>8.17.2</version>
   <packaging>jar</packaging>
   <name>docker-client</name>
   <description>A docker client</description>
@@ -76,7 +76,7 @@
     <dependency>
       <groupId>org.slf4j</groupId>
       <artifactId>slf4j-api</artifactId>
-      <version>1.7.33</version>
+      <version>1.7.35</version>
     </dependency>
     <dependency>
       <groupId>com.google.guava</groupId>
@@ -193,7 +193,7 @@
     <dependency>
       <groupId>org.mockito</groupId>
       <artifactId>mockito-core</artifactId>
-      <version>4.2.0</version>
+      <version>4.3.1</version>
       <scope>test</scope>
     </dependency>
     <dependency>
