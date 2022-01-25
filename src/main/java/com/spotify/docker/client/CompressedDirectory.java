@@ -282,7 +282,7 @@ class CompressedDirectory implements Closeable {
         return FileVisitResult.CONTINUE;
       }
 
-      final TarArchiveEntry entry = new TarArchiveEntry(dir.toFile());
+      final TarArchiveEntry entry = new TarArchiveEntry(dir);
       entry.setName(relativePath.toString());
       entry.setMode(getFileMode(dir));
       tarStream.putArchiveEntry(entry);
@@ -307,7 +307,7 @@ class CompressedDirectory implements Closeable {
         entry.setSize(0);
         entry.setLinkName(links.get(fileKey));
       } else {
-        entry = new TarArchiveEntry(file.toFile());
+        entry = new TarArchiveEntry(file);
         entry.setSize(attrs.size());
         links.put(fileKey, relativePath.toString());
       }
