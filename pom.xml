@@ -21,7 +21,7 @@
   </scm>
 
   <properties>
-    <jackson.vedrsion>2.13.1</jackson.vedrsion>
+    <jackson.vedrsion>2.13.2</jackson.vedrsion>
     <jersey.vedrsion>2.25.1</jersey.vedrsion>
   </properties>
 
