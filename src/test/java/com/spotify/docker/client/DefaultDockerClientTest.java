@@ -3745,7 +3745,8 @@ public class DefaultDockerClientTest {
     sut.startContainer(id);
 
     final ContainerInfo containerInfo = sut.inspectContainer(id);
-    assertThat(containerInfo.config().labels(), is(labels));
+    assertThat(containerInfo.config().labels().get("name"), is(labels.get("name")));
+    assertThat(containerInfo.config().labels().get("foo"), is(labels.get("foo")));
 
     final Map<String, String> labels2 = ImmutableMap.of(
         "name", "starship", "foo", "baz"
