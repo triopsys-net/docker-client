@@ -31,6 +31,8 @@ import java.net.URI;
 import java.nio.file.Paths;
 import java.util.Locale;
 
+import org.apache.commons.lang.SystemUtils;
+
 /**
  * Represents a dockerd endpoint. A codified DOCKER_HOST.
  */
@@ -188,7 +190,7 @@ public class DockerHost {
     final String os = osName.toLowerCase(Locale.ENGLISH);
     if (os.equalsIgnoreCase("linux") || os.contains("mac")) {
       return DEFAULT_UNIX_ENDPOINT;
-    } else if (System.getProperty("os.name").equalsIgnoreCase("Windows 10")) {
+    } else if (SystemUtils.IS_OS_WINDOWS) {
       //from Docker doc: Windows 10 64bit: Pro, Enterprise or Education
       return DEFAULT_WINDOWS_ENDPOINT;
     } else {
