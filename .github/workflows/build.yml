@@ -45,4 +45,4 @@ jobs:
           docker swarm init
           docker version
           docker info
-          mvn clean install
+          mvn --batch-mode clean install "-Dorg.slf4j.simpleLogger.log.org.apache.maven.cli.transfer.Slf4jMavenTransferListener=warn"
