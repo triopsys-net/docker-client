@@ -309,7 +309,9 @@ class CompressedDirectory implements Closeable {
       } else {
         entry = new TarArchiveEntry(file);
         entry.setSize(attrs.size());
-        links.put(fileKey, relativePath.toString());
+        if (fileKey != null) {
+          links.put(fileKey, relativePath.toString());
+        }
       }
 
       entry.setName(relativePath.toString());
