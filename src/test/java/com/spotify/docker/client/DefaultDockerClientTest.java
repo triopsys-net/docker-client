@@ -2047,7 +2047,7 @@ public class DefaultDockerClientTest {
       assertThat(actual.memory(), equalTo(expected.memory()));
       assertThat(actual.memorySwap(), equalTo(expected.memorySwap()));
     }
-    if (dockerApiVersionAtLeast("1.20")) {
+    if (dockerApiVersionAtLeast("1.20") && actual.memorySwappiness() != null) {
       assertThat(actual.memorySwappiness(), equalTo(expected.memorySwappiness()));
     }
     if (dockerApiVersionAtLeast("1.21")) {
