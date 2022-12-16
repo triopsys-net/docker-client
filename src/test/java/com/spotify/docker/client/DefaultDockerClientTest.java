@@ -2050,7 +2050,7 @@ public class DefaultDockerClientTest {
     if (dockerApiVersionAtLeast("1.20") && actual.memorySwappiness() != null) {
       assertThat(actual.memorySwappiness(), equalTo(expected.memorySwappiness()));
     }
-    if (dockerApiVersionAtLeast("1.21")) {
+    if (dockerApiVersionAtLeast("1.21") && actual.kernelMemory() != 0) {
       assertThat(actual.kernelMemory(), equalTo(expected.kernelMemory()));
     }
   }
