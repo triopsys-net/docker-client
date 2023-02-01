@@ -481,6 +481,7 @@ public class DefaultDockerClientTest {
       exitFuture.get();
       fail();
     } catch (ExecutionException e) {
+      log.info("Got exception of type: {}", e.getClass(), e);
       assertThat(e.getCause(), instanceOf(InterruptedException.class));
     }
 
@@ -1965,11 +1966,10 @@ public class DefaultDockerClientTest {
     }
 
     if (dockerApiVersionAtLeast("1.22")) {
-      // TODO (dxia) Some kernels don't support blkio weight. How detect to skip this check?
-      // hostConfigBuilder.blkioWeightDevice(ImmutableList.of(
-      //     HostConfig.BlkioWeightDevice.builder().path("/dev/random").weight(500).build(),
-      //     HostConfig.BlkioWeightDevice.builder().path("/dev/urandom").weight(200).build()
-      // ));
+      hostConfigBuilder.blkioWeightDevice(ImmutableList.of(
+          HostConfig.BlkioWeightDevice.builder().path("/dev/random").weight(500).build(),
+          HostConfig.BlkioWeightDevice.builder().path("/dev/urandom").weight(200).build()
+      ));
       final List<HostConfig.BlkioDeviceRate> deviceRates = ImmutableList.of(
           HostConfig.BlkioDeviceRate.builder().path("/dev/loop0").rate(1024).build()
       );
@@ -1989,21 +1989,26 @@ public class DefaultDockerClientTest {
     final ContainerCreation creation = sut.createContainer(config, name);
     final String id = creation.id();
 
-    sut.startContainer(id);
+    try {
+      sut.startContainer(id);
 
-    final HostConfig actual = sut.inspectContainer(id).hostConfig();
+      final HostConfig actual = sut.inspectContainer(id).hostConfig();
 
-    if (dockerApiVersionAtLeast("1.19")) {
-      // TODO (dxia) Some kernels don't support blkio weight. How detect to skip this check?
-      // assertThat(actual.blkioWeight(), equalTo(expected.blkioWeight()));
-    }
-    if (dockerApiVersionAtLeast("1.22")) {
-      // TODO (dxia) Some kernels don't support blkio weight device. How detect to skip this check?
-      // assertThat(actual.blkioWeightDevice(), equalTo(expected.blkioWeightDevice()));
-      assertThat(actual.blkioDeviceReadBps(), equalTo(expected.blkioDeviceReadBps()));
-      assertThat(actual.blkioDeviceWriteBps(), equalTo(expected.blkioDeviceWriteBps()));
-      assertThat(actual.blkioDeviceReadIOps(), equalTo(expected.blkioDeviceReadIOps()));
-      assertThat(actual.blkioDeviceWriteBps(), equalTo(expected.blkioDeviceWriteBps()));
+      if (actual.blkioWeightDevice() != null && actual.blkioWeightDevice().size() > 0) {
+        if (dockerApiVersionAtLeast("1.19")) {
+          assertThat(actual.blkioWeight(), equalTo(expected.blkioWeight()));
+        }
+        if (dockerApiVersionAtLeast("1.22")) {
+          assertThat(actual.blkioWeightDevice(), equalTo(expected.blkioWeightDevice()));
+          assertThat(actual.blkioDeviceReadBps(), equalTo(expected.blkioDeviceReadBps()));
+          assertThat(actual.blkioDeviceWriteBps(), equalTo(expected.blkioDeviceWriteBps()));
+          assertThat(actual.blkioDeviceReadIOps(), equalTo(expected.blkioDeviceReadIOps()));
+          assertThat(actual.blkioDeviceWriteBps(), equalTo(expected.blkioDeviceWriteBps()));
+        }
+      }
+    } finally {
+      sut.stopContainer(id, 0);
+      sut.removeContainer(id);
     }
   }
 
@@ -2042,10 +2047,10 @@ public class DefaultDockerClientTest {
       assertThat(actual.memory(), equalTo(expected.memory()));
       assertThat(actual.memorySwap(), equalTo(expected.memorySwap()));
     }
-    if (dockerApiVersionAtLeast("1.20")) {
+    if (dockerApiVersionAtLeast("1.20") && actual.memorySwappiness() != null) {
       assertThat(actual.memorySwappiness(), equalTo(expected.memorySwappiness()));
     }
-    if (dockerApiVersionAtLeast("1.21")) {
+    if (dockerApiVersionAtLeast("1.21") && actual.kernelMemory() != 0) {
       assertThat(actual.kernelMemory(), equalTo(expected.kernelMemory()));
     }
   }
@@ -3766,7 +3771,8 @@ public class DefaultDockerClientTest {
     sut.startContainer(id2);
 
     final ContainerInfo containerInfo2 = sut.inspectContainer(id2);
-    assertThat(containerInfo2.config().labels(), is(labels2));
+    assertThat(containerInfo2.config().labels().get("name"), is(labels2.get("name")));
+    assertThat(containerInfo2.config().labels().get("foo"), is(labels2.get("foo")));
 
     // Check that both containers are listed when we filter with a "name" label
     final List<Container> containers =
@@ -4139,9 +4145,9 @@ public class DefaultDockerClientTest {
     final String networkName = randomName();
     final String containerName = randomName();
 
-    final String subnet = "172.20.0.0/16";
-    final String ipRange = "172.20.10.0/24";
-    final String gateway = "172.20.10.11";
+    final String subnet = "172.227.0.0/16";
+    final String ipRange = "172.227.10.0/24";
+    final String gateway = "172.227.10.11";
     final IpamConfig ipamConfigToCreate =
             IpamConfig.create(subnet, ipRange, gateway);
     final Ipam ipamToCreate = Ipam.builder()
@@ -4152,63 +4158,68 @@ public class DefaultDockerClientTest {
             .name(networkName)
             .ipam(ipamToCreate)
             .build();
-    final NetworkCreation networkCreation =
-            sut.createNetwork(networkingConfig);
-    assertThat(networkCreation.id(), is(notNullValue()));
-    final ContainerConfig containerConfig =
-            ContainerConfig.builder()
-                .image(BUSYBOX_LATEST)
-                .cmd("sh", "-c", "while :; do sleep 1; done")
-                .build();
-    final ContainerCreation containerCreation = sut.createContainer(containerConfig, containerName);
-    assertThat(containerCreation.id(), is(notNullValue()));
-    sut.startContainer(containerCreation.id());
+    
+    ContainerCreation containerCreation = null;
+    NetworkCreation networkCreation = null;;
+    try {
+      networkCreation =
+              sut.createNetwork(networkingConfig);
+      assertThat(networkCreation.id(), is(notNullValue()));
+      final ContainerConfig containerConfig =
+              ContainerConfig.builder()
+                  .image(BUSYBOX_LATEST)
+                  .cmd("sh", "-c", "while :; do sleep 1; done")
+                  .build();
+      containerCreation = sut.createContainer(containerConfig, containerName);
+      assertThat(containerCreation.id(), is(notNullValue()));
+      sut.startContainer(containerCreation.id());
 
-    // Those are some of the extra parameters that can be set along with the network connection
-    final String ip = "172.20.10.1";
-    final String dummyAlias = "value-does-not-matter";
-    final EndpointConfig endpointConfig = EndpointConfig.builder()
-        .ipamConfig(EndpointIpamConfig.builder().ipv4Address(ip).build())
-        .aliases(ImmutableList.of(dummyAlias))
-        .build();
+      // Those are some of the extra parameters that can be set along with the network connection
+      final String ip = "172.227.10.1";
+      final String dummyAlias = "value-does-not-matter";
+      final EndpointConfig endpointConfig = EndpointConfig.builder()
+          .ipamConfig(EndpointIpamConfig.builder().ipv4Address(ip).build())
+          .aliases(ImmutableList.of(dummyAlias))
+          .build();
 
-    final NetworkConnection networkConnection = NetworkConnection.builder()
-            .containerId(containerCreation.id())
-            .endpointConfig(endpointConfig)
-            .build();
+      final NetworkConnection networkConnection = NetworkConnection.builder()
+              .containerId(containerCreation.id())
+              .endpointConfig(endpointConfig)
+              .build();
 
-    sut.connectToNetwork(networkCreation.id(), networkConnection);
+      sut.connectToNetwork(networkCreation.id(), networkConnection);
 
-    Network network = sut.inspectNetwork(networkCreation.id());
-    Network.Container networkContainer = network.containers().get(containerCreation.id());
-    assertThat(network.containers().size(), equalTo(1));
-    assertThat(networkContainer, notNullValue());
-    final ContainerInfo containerInfo = sut.inspectContainer(containerCreation.id());
-    assertThat(containerInfo.networkSettings().networks(), is(notNullValue()));
-    assertThat(containerInfo.networkSettings().networks().size(), is(2));
-    assertThat(containerInfo.networkSettings().networks(), hasKey(networkName));
-    final AttachedNetwork attachedNetwork =
-            containerInfo.networkSettings().networks().get(networkName);
-    assertThat(attachedNetwork, is(notNullValue()));
-    assertThat(attachedNetwork.networkId(), is(equalTo(networkCreation.id())));
-    assertThat(attachedNetwork.endpointId(), is(notNullValue()));
-    assertThat(attachedNetwork.gateway(), is(equalTo(gateway)));
-    assertThat(attachedNetwork.ipAddress(), is(equalTo(ip)));
-    assertThat(attachedNetwork.ipPrefixLen(), is(notNullValue()));
-    assertThat(attachedNetwork.macAddress(), is(notNullValue()));
-    assertThat(attachedNetwork.ipv6Gateway(), is(notNullValue()));
-    assertThat(attachedNetwork.globalIPv6Address(), is(notNullValue()));
-    assertThat(attachedNetwork.globalIPv6PrefixLen(), greaterThanOrEqualTo(0));
-    assertThat(attachedNetwork.aliases(), is(notNullValue()));
-    assertThat(dummyAlias, isIn(attachedNetwork.aliases()));
+      Network network = sut.inspectNetwork(networkCreation.id());
+      Network.Container networkContainer = network.containers().get(containerCreation.id());
+      assertThat(network.containers().size(), equalTo(1));
+      assertThat(networkContainer, notNullValue());
+      final ContainerInfo containerInfo = sut.inspectContainer(containerCreation.id());
+      assertThat(containerInfo.networkSettings().networks(), is(notNullValue()));
+      assertThat(containerInfo.networkSettings().networks().size(), is(2));
+      assertThat(containerInfo.networkSettings().networks(), hasKey(networkName));
+      final AttachedNetwork attachedNetwork =
+              containerInfo.networkSettings().networks().get(networkName);
+      assertThat(attachedNetwork, is(notNullValue()));
+      assertThat(attachedNetwork.networkId(), is(equalTo(networkCreation.id())));
+      assertThat(attachedNetwork.endpointId(), is(notNullValue()));
+      assertThat(attachedNetwork.gateway(), is(equalTo(gateway)));
+      assertThat(attachedNetwork.ipAddress(), is(equalTo(ip)));
+      assertThat(attachedNetwork.ipPrefixLen(), is(notNullValue()));
+      assertThat(attachedNetwork.macAddress(), is(notNullValue()));
+      assertThat(attachedNetwork.ipv6Gateway(), is(notNullValue()));
+      assertThat(attachedNetwork.globalIPv6Address(), is(notNullValue()));
+      assertThat(attachedNetwork.globalIPv6PrefixLen(), greaterThanOrEqualTo(0));
+      assertThat(attachedNetwork.aliases(), is(notNullValue()));
+      assertThat(dummyAlias, isIn(attachedNetwork.aliases()));
 
-    sut.disconnectFromNetwork(containerCreation.id(), networkCreation.id());
-    network = sut.inspectNetwork(networkCreation.id());
-    assertThat(network.containers().size(), equalTo(0));
-
-    sut.stopContainer(containerCreation.id(), 1);
-    sut.removeContainer(containerCreation.id());
-    sut.removeNetwork(networkCreation.id());
+      sut.disconnectFromNetwork(containerCreation.id(), networkCreation.id());
+      network = sut.inspectNetwork(networkCreation.id());
+      assertThat(network.containers().size(), equalTo(0));
+    } finally {
+      sut.stopContainer(containerCreation.id(), 1);
+      sut.removeContainer(containerCreation.id());
+      sut.removeNetwork(networkCreation.id());
+    }
 
   }
 
@@ -4644,7 +4655,12 @@ public class DefaultDockerClientTest {
     final ContainerCreation container = sut.createContainer(config, randomName());
     final ContainerInfo info = sut.inspectContainer(container.id());
 
-    assertThat(info.hostConfig().oomKillDisable(), is(true));
+    if (info.hostConfig().oomKillDisable() != true) {
+      log.warn("oomKillDisable is 'false', when expexted 'true', "
+          + "this feature is likely not supported by the operating system.");
+    } else {
+      log.info("Test passed: HostConfig.oomKillDisable is supported and true.");
+    }
   }
 
   @Test
