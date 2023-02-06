@@ -23,7 +23,7 @@ jobs:
     continue-on-error: ${{ matrix.experimental }}
     strategy:
       matrix:
-        os: [ ubuntu-latest ]
+        os: [ ubuntu-latest, windows-latest ]
         java: [ 8, 11 ]
         experimental: [ false ]
 
@@ -40,9 +40,17 @@ jobs:
         with:
           java-version: ${{ matrix.java }}
           distribution: adopt
-      - name: Build
+      - name: Build on Ubuntu
+        if: matrix.os == 'ubuntu-latest'  
         run: |
           docker swarm init
           docker version
           docker info
-          mvn clean install
+          mvn --batch-mode clean install "-Dorg.slf4j.simpleLogger.log.org.apache.maven.cli.transfer.Slf4jMavenTransferListener=warn" 
+      - name: Build on Windows
+        if: matrix.os == 'windows-latest'  
+        run: |
+          docker swarm init
+          docker version
+          docker info
+          mvn --batch-mode clean install "-Dorg.slf4j.simpleLogger.log.org.apache.maven.cli.transfer.Slf4jMavenTransferListener=warn" "-DskipTests" -DskipITs

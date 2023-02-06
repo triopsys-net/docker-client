@@ -69,84 +69,111 @@ public abstract class MemoryStats {
   @AutoValue
   public abstract static class Stats {
 
+    @Nullable
     @JsonProperty("active_file")
     public abstract Long activeFile();
 
+    @Nullable
     @JsonProperty("total_active_file")
     public abstract Long totalActiveFile();
 
+    @Nullable
     @JsonProperty("inactive_file")
     public abstract Long inactiveFile();
 
+    @Nullable
     @JsonProperty("total_inactive_file")
     public abstract Long totalInactiveFile();
 
+    @Nullable
     @JsonProperty("cache")
     public abstract Long cache();
 
+    @Nullable
     @JsonProperty("total_cache")
     public abstract Long totalCache();
 
+    @Nullable
     @JsonProperty("active_anon")
     public abstract Long activeAnon();
 
+    @Nullable
     @JsonProperty("total_active_anon")
     public abstract Long totalActiveAnon();
 
+    @Nullable
     @JsonProperty("inactive_anon")
     public abstract Long inactiveAnon();
 
+    @Nullable
     @JsonProperty("total_inactive_anon")
     public abstract Long totalInactiveAnon();
 
+    @Nullable
     @JsonProperty("hierarchical_memory_limit")
     public abstract BigInteger hierarchicalMemoryLimit();
 
+    @Nullable
     @JsonProperty("mapped_file")
     public abstract Long mappedFile();
 
+    @Nullable
     @JsonProperty("total_mapped_file")
     public abstract Long totalMappedFile();
 
+    @Nullable
     @JsonProperty("pgmajfault")
     public abstract Long pgmajfault();
 
+    @Nullable
     @JsonProperty("total_pgmajfault")
     public abstract Long totalPgmajfault();
 
+    @Nullable
     @JsonProperty("pgpgin")
     public abstract Long pgpgin();
 
+    @Nullable
     @JsonProperty("total_pgpgin")
     public abstract Long totalPgpgin();
 
+    @Nullable
     @JsonProperty("pgpgout")
     public abstract Long pgpgout();
 
+    @Nullable
     @JsonProperty("total_pgpgout")
     public abstract Long totalPgpgout();
 
+    @Nullable
     @JsonProperty("pgfault")
     public abstract Long pgfault();
 
+    @Nullable
     @JsonProperty("total_pgfault")
     public abstract Long totalPgfault();
 
+    @Nullable
     @JsonProperty("rss")
     public abstract Long rss();
 
+    @Nullable
     @JsonProperty("total_rss")
     public abstract Long totalRss();
 
+    @Nullable
     @JsonProperty("rss_huge")
     public abstract Long rssHuge();
 
+    @Nullable
     @JsonProperty("total_rss_huge")
     public abstract Long totalRssHuge();
 
+    @Nullable
     @JsonProperty("unevictable")
     public abstract Long unevictable();
 
+    @Nullable
     @JsonProperty("total_unevictable")
     public abstract Long totalUnevictable();
 

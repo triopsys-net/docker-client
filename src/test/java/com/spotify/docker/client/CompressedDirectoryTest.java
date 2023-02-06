@@ -28,6 +28,7 @@ import static org.hamcrest.Matchers.is;
 import static org.junit.Assert.assertThat;
 
 import com.google.common.io.Resources;
+import com.spotify.docker.PlatformUtil;
 
 import java.io.BufferedInputStream;
 import java.io.BufferedWriter;
@@ -154,6 +155,10 @@ public class CompressedDirectoryTest {
 
   @Test
   public void testFileWithHardLinks() throws Exception {
+    if (PlatformUtil.IS_WINDOWS) {
+      // Hardlinks in archives are not supported on Windows.
+      return;
+    }
     final Path tempDir = Files.createTempDirectory("dockerDirectoryHardLinks");
     final Path withLinksDir = tempDir.resolve("withLinks");
     final Path withLinksSubDir = withLinksDir.resolve("sub");
