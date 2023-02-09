@@ -7,17 +7,21 @@
     <version>5</version>
   </parent>
 
-  <groupId>com.xenoamess.docker</groupId>
+  <groupId>net.triopsys.docker</groupId>
   <artifactId>docker-client</artifactId>
   <version>8.18.4-SNAPSHOT</version>
+  
   <packaging>jar</packaging>
+  
   <name>docker-client</name>
   <description>A docker client</description>
-  <url>https://github.com/XenoAmess/docker-client</url>
-
+  
+  <url>https://github.com/triopsys-net/docker-client</url>
+  
   <scm>
-    <developerConnection>scm:git:https://github.com/XenoAmess/docker-client.git</developerConnection>
-    <tag>HEAD</tag>
+    <connection>scm:git:git@github.com:triopsys-net/docker-client.git</connection>
+    <developerConnection>scm:git:https://github.com/triopsys-net/docker-client.git</developerConnection>
+    <url>https://github.com/triopsys-net/docker-client</url>
   </scm>
 
   <properties>
