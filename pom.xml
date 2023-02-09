@@ -26,6 +26,8 @@
 
   <properties>
     <jackson.version>2.14.2</jackson.version>
+    <!-- Used for deploying artifacts/packages to Github: -->
+    <repo.owner.id>triopsys-net</repo.owner.id>
   </properties>
 
   <licenses>
@@ -492,9 +494,33 @@
           </execution>
         </executions>
       </plugin>
+      <plugin>
+        <artifactId>maven-deploy-plugin</artifactId>
+        <version>3.1.0</version>
+      </plugin>
     </plugins>
   </build>
 
+  <profiles>
+    <profile>
+      <id>deploy-github</id>
+      <!-- Override distribution management from parent-pom (deploys to Maven Central) -->
+      <distributionManagement>
+        <repository>
+          <id>github</id>
+          <name>GitHub Packages</name>
+          <url>https://maven.pkg.github.com/${repo.owner.id}/${project.artifactId}</url>
+        </repository>
+        <snapshotRepository>
+          <id>github-snapshots</id>
+          <name>GitHub Packages</name>
+          <url>https://maven.pkg.github.com/${repo.owner.id}/${project.artifactId}</url>
+        </snapshotRepository>
+      </distributionManagement>
+      
+    </profile>
+  </profiles>
+  
   <reporting>
     <plugins>
       <plugin>
