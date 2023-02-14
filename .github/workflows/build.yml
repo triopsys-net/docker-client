@@ -48,7 +48,7 @@ jobs:
           docker swarm init
           docker version
           docker info
-          mvn --batch-mode clean install "-Dorg.slf4j.simpleLogger.log.org.apache.maven.cli.transfer.Slf4jMavenTransferListener=warn"
+          mvn --batch-mode clean install -Dorg.slf4j.simpleLogger.log.org.apache.maven.cli.transfer.Slf4jMavenTransferListener=warn
 
       - name: Build on Windows
         if: matrix.os == 'windows-latest'
@@ -56,11 +56,12 @@ jobs:
           docker swarm init
           docker version
           docker info
-          mvn --batch-mode clean install "-Dorg.slf4j.simpleLogger.log.org.apache.maven.cli.transfer.Slf4jMavenTransferListener=warn" "-DskipTests" -DskipITs
+          mvn --batch-mode clean install "-Dorg.slf4j.simpleLogger.log.org.apache.maven.cli.transfer.Slf4jMavenTransferListener=warn" "-DskipTests" "-DskipITs"
 
   deploy:
     runs-on: ubuntu-latest
     needs: [build]
+    if:  ${{ github.ref == 'refs/heads/master' || github.ref == 'refs/heads/develop' }}
 
     steps:
       - uses: actions/checkout@v3
@@ -79,7 +80,7 @@ jobs:
       - name: Set env vars for snapshot deployment
         run: |
           echo "MAVEN_SERVER_ID=github-snapshots" >> $GITHUB_ENV
-        if:  ${{ github.ref != 'refs/heads/master' }}
+        if:  ${{ github.ref != 'refs/heads/master' }} # use != master to also easily support deploying other (feature) branches
 
       - name: Set up JDK 11 for deploying artifacts
         uses: actions/setup-java@v3
@@ -91,7 +92,7 @@ jobs:
           server-password: GITHUB_TOKEN
 
       - name: Deploy maven artifacts
-        run: mvn --batch-mode deploy -DskipTests -DskipITs -Dcheckstyle.skip=true -Dfindbugs.skip=true -Pdeploy-github
+        run: mvn -Pdeploy-github --batch-mode deploy -DskipTests -DskipITs -Dcheckstyle.skip=true -Dfindbugs.skip=true
         env:
           # DEPLOY_DOCKER_PACKAGES: organization level secret for uploading to Github Packages repository.
           GITHUB_ACTOR: ${{ env.DEPLOY_DOCKER_PACKAGES_USER}}
