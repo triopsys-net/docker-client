@@ -516,8 +516,7 @@
           <name>GitHub Packages</name>
           <url>https://maven.pkg.github.com/${repo.owner.id}/${project.artifactId}</url>
         </snapshotRepository>
-      </distributionManagement>
-      
+      </distributionManagement>      
     </profile>
   </profiles>
   

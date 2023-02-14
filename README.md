@@ -131,6 +131,36 @@ you can also build and release locally by running the below.
 mvn clean [-DskipTests -Darguments=-DskipTests] -Dgpg.keyname=<key ID used for signing artifacts> release:prepare release:perform
 ```
 
+## A note on shading
+
+Please note that in releases 2.7.6 and earlier, the default artifact was the shaded version.
+When upgrading to version 2.7.7, you will need to include the shaded classifier if you relied on
+the shaded dependencies in the docker-client jar.
+
+Standard:
+
+```xml
+<dependency>
+  <groupId>net.triopsys.docker</groupId>
+  <artifactId>docker-client</artifactId>
+  <version>8.18.4</version>
+</dependency>
+```
+
+Shaded:
+
+```xml
+<dependency>
+  <groupId>net.triopsys.docker</groupId>
+  <artifactId>docker-client</artifactId>
+  <classifier>shaded</classifier>
+  <version>8.18.4</version>
+</dependency>
+```
+
+**This is particularly important if you use Jersey 1.x in your project. To avoid conflicts with
+docker-client and Jersey 2.x, you will need to explicitly specify the shaded version above.**
+
 ## Code of conduct
 
 This project adheres to the [Open Code of Conduct][code-of-conduct]. By participating, you are
