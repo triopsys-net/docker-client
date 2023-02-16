@@ -1,0 +1,22 @@
+<?xml version="1.0"?>
+
+<!DOCTYPE suppressions PUBLIC
+  "-//Checkstyle//DTD SuppressionFilter Configuration 1.2//EN"
+  "https://checkstyle.org/dtds/suppressions_1_2.dtd">
+
+<suppressions>
+  
+  <suppress checks="SummaryJavadoc"
+    files="src/main/java/com/spotify/docker/client/messages/.*.java"/>
+  
+  <suppress checks="CustomImportOrder"
+    files="src/(main|test)/java/com/spotify/docker/client/messages/.*.java"/>  
+    
+  <suppress checks="MissingJavadocMethod"
+    files="src/main/java/com/spotify/docker/client/(messages|exceptions)/.*.java|src/main/java/com/spotify/docker/.+\w(Test|IT).java"/>
+    
+  <suppress checks="MissingJavadocMethod"
+    files=".*(Test|IT).java"/>
+    
+  
+</suppressions>
