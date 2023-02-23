@@ -269,7 +269,8 @@ public interface DockerClient extends Closeable {
    * @throws InterruptedException if the thread is interrupted.
    *
    * @deprecated Use {@link #load(InputStream)} to load a set of image layers from a tarball. Use
-   * {@link #create(String, InputStream)} to create a single image from the contents of a tarball.
+   *             {@link #create(String, InputStream)} to create a single image from the contents 
+   *             of a tarball.
    */
   @Deprecated
   void load(String image, InputStream imagePayload)
@@ -415,7 +416,7 @@ public interface DockerClient extends Closeable {
   void pull(String image) throws DockerException, InterruptedException;
 
   /**
-   * Pull a docker container image, using a custom ProgressMessageHandler
+   * Pull a docker container image, using a custom ProgressMessageHandler.
    *
    * @param image   The image to pull.
    * @param handler The handler to use for processing each progress message received from Docker.
@@ -465,7 +466,7 @@ public interface DockerClient extends Closeable {
   void push(String image) throws DockerException, InterruptedException;
 
   /**
-   * Push a docker container image, using a custom ProgressHandler
+   * Push a docker container image, using a custom ProgressHandler.
    *
    * @param image   The image to push.
    * @param handler The handler to use for processing each progress message received from Docker.
@@ -1795,7 +1796,7 @@ public interface DockerClient extends Closeable {
       throws DockerException, InterruptedException;
 
   /**
-   * Parameters for {@link #listNetworks(ListNetworksParam...)}
+   * Parameters for {@link #listNetworks(ListNetworksParam...)}.
    * @since Docker 1.10, API version 1.22
    */
   class ListNetworksParam extends Param {
@@ -2012,7 +2013,7 @@ public interface DockerClient extends Closeable {
   void close();
 
   /**
-   * Parameters for {@link #execCreate(String, String[], ExecCreateParam...)}
+   * Parameters for {@link #execCreate(String, String[], ExecCreateParam...)}.
    */
   class ExecCreateParam extends Param {
 
@@ -2025,7 +2026,7 @@ public interface DockerClient extends Closeable {
     }
 
     /**
-     * Execute in detached mode
+     * Execute in detached mode.
      *
      * @param detach Whether to detach.
      * @return ExecCreateParam
@@ -2044,7 +2045,7 @@ public interface DockerClient extends Closeable {
     }
 
     /**
-     * Attach stdin
+     * Attach stdin.
      *
      * @param attachStdin Whether to attach the standard input which allows user interaction.
      * @return ExecCreateParam
@@ -2151,7 +2152,7 @@ public interface DockerClient extends Closeable {
 
 
   /**
-   * Parameters for {@link #logs(String, LogsParam...)}
+   * Parameters for {@link #logs(String, LogsParam...)}.
    */
 
   class LogsParam extends Param {
@@ -2270,7 +2271,7 @@ public interface DockerClient extends Closeable {
   }
 
   /**
-   * Parameters for {@link #attachContainer(String, AttachParameter...)}
+   * Parameters for {@link #attachContainer(String, AttachParameter...)}.
    */
   enum AttachParameter {
     LOGS,
@@ -2305,7 +2306,7 @@ public interface DockerClient extends Closeable {
   String getHost();
 
   /**
-   * Parameters for {@link #listContainers(ListContainersParam...)}
+   * Parameters for {@link #listContainers(ListContainersParam...)}.
    */
   class ListContainersParam extends Param {
 
@@ -2612,7 +2613,7 @@ public interface DockerClient extends Closeable {
   }
 
   /**
-   * Parameters for {@link #events(EventsParam...)}
+   * Parameters for {@link #events(EventsParam...)}.
    */
   class EventsParam extends Param {
 
@@ -2621,7 +2622,7 @@ public interface DockerClient extends Closeable {
     }
 
     /**
-     * Filter events until the given timestamp
+     * Filter events until the given timestamp.
      *
      * @param until Return events up until this Unix timestamp.
      * @return {@link EventsParam}
@@ -2632,7 +2633,7 @@ public interface DockerClient extends Closeable {
     }
 
     /**
-     * Filter events since the given timestamp
+     * Filter events since the given timestamp.
      *
      * @param since Return events since this Unix timestamp.
      * @return {@link EventsParam}
@@ -2770,7 +2771,7 @@ public interface DockerClient extends Closeable {
     }
 
     /**
-     * Show events for a scope: "local" or "swarm"
+     * Show events for a scope: "local" or "swarm".
      * @param scope "local" or "swarm"
      * @return EventsParam
      * @since API 1.30

@@ -23,7 +23,6 @@ package com.spotify.docker.it;
 import static com.google.common.base.Strings.isNullOrEmpty;
 import static java.util.Collections.singletonMap;
 import static java.util.concurrent.TimeUnit.SECONDS;
-import static org.hamcrest.CoreMatchers.isA;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.io.Resources;
@@ -36,7 +35,6 @@ import com.spotify.docker.client.DockerConfigReader;
 import com.spotify.docker.client.auth.ConfigFileRegistryAuthSupplier;
 import com.spotify.docker.client.auth.FixedRegistryAuthSupplier;
 import com.spotify.docker.client.exceptions.ContainerNotFoundException;
-import com.spotify.docker.client.exceptions.DockerException;
 import com.spotify.docker.client.exceptions.ImagePushFailedException;
 import com.spotify.docker.client.messages.ContainerConfig;
 import com.spotify.docker.client.messages.ContainerCreation;
@@ -54,13 +52,15 @@ import java.util.concurrent.Callable;
 
 import javax.ws.rs.NotAuthorizedException;
 
+import org.hamcrest.MatcherAssert;
+import org.hamcrest.core.IsInstanceOf;
 import org.junit.After;
+import org.junit.Assert;
 import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Ignore;
 import org.junit.Rule;
 import org.junit.Test;
-import org.junit.rules.ExpectedException;
 import org.junit.rules.TestName;
 
 /**
@@ -106,9 +106,6 @@ public class PushPullIT {
   @Rule
   public final TestName testName = new TestName();
 
-  @Rule
-  public final ExpectedException exception = ExpectedException.none();
-
   @BeforeClass
   public static void before() throws Exception {
     // Pull the registry image down once before any test methods in this class run
@@ -131,7 +128,6 @@ public class PushPullIT {
   }
 
   @After
-  @SuppressWarnings("deprecated")
   public void tearDown() throws Exception {
     if (!isNullOrEmpty(registryContainerId)) {
       client.stopContainer(registryContainerId, SECONDS_TO_WAIT_BEFORE_KILL);
@@ -151,8 +147,10 @@ public class PushPullIT {
     final String dockerDirectory = Resources.getResource("dockerDirectory").getPath();
     client.build(Paths.get(dockerDirectory), LOCAL_IMAGE);
 
-    exception.expect(ImagePushFailedException.class);
-    client.push(LOCAL_IMAGE);
+    Assert.assertThrows(ImagePushFailedException.class, () -> {
+      client.push(LOCAL_IMAGE);
+    });
+    
   }
 
   @Test
@@ -279,9 +277,10 @@ public class PushPullIT {
         .username(HUB_AUTH_USERNAME2)
         .password("foobar")
         .build();
-    exception.expect(DockerException.class);
-    exception.expectCause(isA(NotAuthorizedException.class));
-    client.pull(CIRROS_PRIVATE_LATEST, badRegistryAuth);
+    Throwable actualThrowable = Assert.assertThrows(NotAuthorizedException.class, () -> {
+      client.pull(CIRROS_PRIVATE_LATEST, badRegistryAuth);
+    });
+    MatcherAssert.assertThat(actualThrowable.getCause(), org.hamcrest.core.Is.is(IsInstanceOf.instanceOf(NotAuthorizedException.class)));
   }
 
   @Test

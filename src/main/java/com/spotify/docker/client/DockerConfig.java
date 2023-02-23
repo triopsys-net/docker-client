@@ -72,6 +72,7 @@ public abstract class DockerConfig {
   @JsonProperty("imagesFormat")
   public abstract String imagesFormat();
 
+  @SuppressWarnings("MissingJavadocMethod")
   @JsonCreator
   public static DockerConfig create(
           @JsonProperty("credHelpers") final Map<String, String> credHelpers,

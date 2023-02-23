@@ -131,7 +131,6 @@ import com.spotify.docker.client.messages.swarm.UnlockKey;
 import com.spotify.docker.client.npipe.NpipeConnectionSocketFactory;
 
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
-import java.io.Closeable;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
@@ -201,7 +200,7 @@ import org.glassfish.jersey.jackson.JacksonFeature;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-public class DefaultDockerClient implements DockerClient, Closeable {
+public class DefaultDockerClient implements DockerClient {
 
   /**
    * Hack: this {@link ProgressHandler} is meant to capture the image ID (or image digest in Docker
@@ -1996,11 +1995,13 @@ public class DefaultDockerClient implements DockerClient, Closeable {
     }
 
     final List<String> labels = new ArrayList<>();
-    for (Entry<String, String> input: criteria.labels().entrySet()) {
-      if ("".equals(input.getValue())) {
-        labels.add(input.getKey());
-      } else {
-        labels.add(String.format("%s=%s", input.getKey(), input.getValue()));
+    if (criteria.labels() != null) {
+      for (Entry<String, String> input: criteria.labels().entrySet()) {
+        if ("".equals(input.getValue())) {
+          labels.add(input.getKey());
+        } else {
+          labels.add(String.format("%s=%s", input.getKey(), input.getValue()));
+        }
       }
     }
 
@@ -3149,6 +3150,9 @@ public class DefaultDockerClient implements DockerClient, Closeable {
       return this;
     }
 
+    /**
+     * Adds supplier for auth parameters for pull/push requests from/to private repositories.
+     */
     public Builder registryAuthSupplier(final RegistryAuthSupplier registryAuthSupplier) {
       if (this.registryAuthSupplier != null) {
         throw new IllegalStateException(ERROR_MESSAGE);
@@ -3186,10 +3190,16 @@ public class DefaultDockerClient implements DockerClient, Closeable {
       return this;
     }
     
+    /**
+     * Get RequestEntityProcessing.
+     */
     public RequestEntityProcessing getRequestEntityProcessing() {
       return this.requestEntityProcessing;
     }
 
+    /**
+     * Build and return the DefaultDockerClient.
+     */
     public DefaultDockerClient build() {
       // read the docker config file for auth info if nothing else was specified
       if (registryAuthSupplier == null) {

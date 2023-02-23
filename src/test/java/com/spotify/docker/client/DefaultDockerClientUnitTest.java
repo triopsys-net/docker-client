@@ -30,16 +30,16 @@ import static org.hamcrest.Matchers.allOf;
 import static org.hamcrest.Matchers.contains;
 import static org.hamcrest.Matchers.containsInAnyOrder;
 import static org.hamcrest.Matchers.containsString;
+import static org.hamcrest.Matchers.emptyOrNullString;
 import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.hasItem;
 import static org.hamcrest.Matchers.hasKey;
 import static org.hamcrest.Matchers.hasSize;
 import static org.hamcrest.Matchers.is;
-import static org.hamcrest.Matchers.isEmptyOrNullString;
 import static org.hamcrest.Matchers.not;
 import static org.hamcrest.Matchers.notNullValue;
 import static org.hamcrest.Matchers.nullValue;
-import static org.junit.Assert.assertThat;
+import static org.hamcrest.MatcherAssert.assertThat;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -106,10 +106,9 @@ import okio.Buffer;
 
 import org.glassfish.jersey.client.RequestEntityProcessing;
 import org.junit.After;
+import org.junit.Assert;
 import org.junit.Before;
-import org.junit.Rule;
 import org.junit.Test;
-import org.junit.rules.ExpectedException;
 
 /**
  * Tests DefaultDockerClient against a {@link okhttp3.mockwebserver.MockWebServer} instance, so
@@ -137,9 +136,6 @@ public class DefaultDockerClientUnitTest {
   private final MockWebServer server = new MockWebServer();
 
   private DefaultDockerClient.Builder builder;
-
-  @Rule
-  public ExpectedException thrown = ExpectedException.none();
 
   @Before
   public void setup() throws Exception {
@@ -212,17 +208,17 @@ public class DefaultDockerClientUnitTest {
                 .uri("https://192.168.53.103:2375").build();
         assertThat((String) client.getClient().getConfiguration()
                         .getProperty("jersey.config.client.proxy.uri"),
-                isEmptyOrNullString());
+                is(emptyOrNullString()));
         final DefaultDockerClient client1 = DefaultDockerClient.builder()
                 .uri("https://127.0.0.1:2375").build();
         assertThat((String) client1.getClient().getConfiguration()
                         .getProperty("jersey.config.client.proxy.uri"),
-                isEmptyOrNullString());
+                is(emptyOrNullString()));
         final DefaultDockerClient client2 = DefaultDockerClient.builder()
                 .uri("https://localhost:2375").build();
         assertThat((String) client2.getClient().getConfiguration()
                         .getProperty("jersey.config.client.proxy.uri"),
-                isEmptyOrNullString());
+                is(emptyOrNullString()));
       }
     } finally {
       System.clearProperty("http.proxyHost");
@@ -244,6 +240,7 @@ public class DefaultDockerClientUnitTest {
     server.enqueue(new MockResponse());
 
     final DefaultDockerClient dockerClient = new DefaultDockerClient(builder);
+    
     dockerClient.info();
 
     final RecordedRequest recordedRequest = takeRequestImmediately();
@@ -278,7 +275,6 @@ public class DefaultDockerClientUnitTest {
   }
   
   @Test
-  @SuppressWarnings("unchecked")
   public void testGroupAdd() throws Exception {
     final DefaultDockerClient dockerClient = new DefaultDockerClient(builder);
 
@@ -303,7 +299,6 @@ public class DefaultDockerClientUnitTest {
   }
 
   @Test
-  @SuppressWarnings("unchecked")
   public void testCapAddAndDrop() throws Exception {
     final DefaultDockerClient dockerClient = new DefaultDockerClient(builder);
 
@@ -347,18 +342,19 @@ public class DefaultDockerClientUnitTest {
   }
 
   @Test
-  @SuppressWarnings("deprecated")
+  @SuppressWarnings("deprecation")
   public void buildThrowsIfRegistryAuthandRegistryAuthSupplierAreBothSpecified() {
-    thrown.expect(IllegalStateException.class);
-    thrown.expectMessage("LOGIC ERROR");
-
-    final RegistryAuthSupplier authSupplier = mock(RegistryAuthSupplier.class);
+    
+    Throwable actualThrown = Assert.assertThrows(IllegalStateException.class, () -> {
+      final RegistryAuthSupplier authSupplier = mock(RegistryAuthSupplier.class);
 
     //noinspection deprecation
     DefaultDockerClient.builder()
         .registryAuth(RegistryAuth.builder().identityToken("hello").build())
         .registryAuthSupplier(authSupplier)
         .build();
+    });
+    assertThat(actualThrown.getMessage(), containsString("LOGIC ERROR"));
   }
 
   @Test

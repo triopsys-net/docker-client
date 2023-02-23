@@ -428,6 +428,7 @@ class CompressedDirectory implements Closeable {
     }
 
     /**
+     * Get ex-/inclusion type.
      * @return <code>true</code> if the given {@code pattern} is an exclusion, <code>false</code> if
      *         it is an exclude to an exclusion.
      */
@@ -436,6 +437,7 @@ class CompressedDirectory implements Closeable {
     }
 
     /**
+     * Match given path.
      * @param path the path to match.
      * @return <code>true</code> if the given {@code path} starts with the pattern or matches the
      *         pattern

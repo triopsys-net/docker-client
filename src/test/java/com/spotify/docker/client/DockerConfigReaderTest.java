@@ -60,12 +60,10 @@ import org.apache.commons.lang.RandomStringUtils;
 import org.hamcrest.CustomTypeSafeMatcher;
 import org.hamcrest.Matcher;
 import org.junit.AfterClass;
+import org.junit.Assert;
 import org.junit.Before;
-import org.junit.Rule;
 import org.junit.Test;
-import org.junit.rules.ExpectedException;
 
-@SuppressWarnings("deprecated")
 public class DockerConfigReaderTest {
 
   private static final RegistryAuth DOCKER_AUTH_CONFIG = RegistryAuth.builder()
@@ -88,8 +86,6 @@ public class DockerConfigReaderTest {
       .identityToken("52ce5fd5-eb60-42bf-931f-5eeec128211a")
       .build();
 
-  @Rule
-  public ExpectedException expectedException = ExpectedException.none();
 
   private final DockerConfigReader reader = new DockerConfigReader();
 
@@ -166,8 +162,10 @@ public class DockerConfigReaderTest {
   @Test
   public void testFromDockerConfig_MissingConfigFile() throws Exception {
     final Path randomPath = Paths.get(RandomStringUtils.randomAlphanumeric(16) + ".json");
-    expectedException.expect(FileNotFoundException.class);
-    reader.anyRegistryAuth(randomPath);
+    Assert.assertThrows(FileNotFoundException.class, () -> {
+      reader.anyRegistryAuth(randomPath);
+    });
+    
   }
 
   @Test
@@ -333,7 +331,7 @@ public class DockerConfigReaderTest {
   public void testConfigFromEnv() throws IOException {
     DockerHost.SystemDelegate systemDelegate = mock(DockerHost.SystemDelegate.class);
     when(systemDelegate.getenv("DOCKER_CONFIG"))
-      .thenReturn("src/test/resources/dockerConfigFromEnv");
+        .thenReturn("src/test/resources/dockerConfigFromEnv");
     when(systemDelegate.getProperty("os.name")).thenReturn(System.getProperty("os.name"));
     DockerHost.setSystemDelegate(systemDelegate);
     try {

@@ -61,6 +61,12 @@ public class LogMessage {
       return id;
     }
 
+    /**
+     * Get Stream from id.
+     * @param id 0 (STDIN), 1 (STDOUT) or 2 (STDERR)
+     * @return Stream
+     * @throws IllegalArgumentException when unsupported id is given.
+     */
     public static Stream of(final int id) {
       switch (id) {
         case 0:

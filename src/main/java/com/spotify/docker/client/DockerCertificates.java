@@ -211,6 +211,7 @@ public class DockerCertificates implements DockerCertificatesStore {
     return new Builder();
   }
 
+  @SuppressWarnings("MissingJavadocMethod")
   public static class Builder {
 
     private SslContextFactory sslContextFactory = new DefaultSslContextFactory();

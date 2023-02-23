@@ -28,6 +28,15 @@ import java.util.concurrent.TimeoutException;
 
 public class Polling {
 
+  /**
+   * Wait for Callable to finish with a timeout.
+   * @param <T> return type of Callable
+   * @param timeout amount for timeUnit of the timeout.
+   * @param timeUnit time unit for timeout 
+   * @param callable callable
+   * @return return type from callable
+   * @throws Exception Can throw any exception from Callable.
+   */
   public static <T> T await(final long timeout, final TimeUnit timeUnit, final Callable<T> callable)
       throws Exception {
     final long deadline = nanoTime() + timeUnit.toNanos(timeout);

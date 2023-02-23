@@ -23,7 +23,6 @@ package com.spotify.docker.client;
 import static com.google.common.base.Charsets.UTF_8;
 
 import com.google.common.annotations.VisibleForTesting;
-import com.google.common.base.Throwables;
 import com.google.common.collect.AbstractIterator;
 import com.google.common.io.Closer;
 
@@ -55,7 +54,7 @@ class DefaultLogStream extends AbstractIterator<LogMessage> implements LogStream
     try {
       message = reader.nextMessage();
     } catch (IOException e) {
-      throw Throwables.propagate(e);
+      throw new RuntimeException(e);
     }
     if (message == null) {
       return endOfData();
@@ -68,7 +67,7 @@ class DefaultLogStream extends AbstractIterator<LogMessage> implements LogStream
     try {
       reader.close();
     } catch (IOException e) {
-      throw Throwables.propagate(e);
+      throw new RuntimeException(e);
     }
   }
 

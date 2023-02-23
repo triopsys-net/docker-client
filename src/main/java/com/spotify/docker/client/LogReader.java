@@ -41,6 +41,10 @@ public class LogReader implements Closeable {
     this.stream = stream;
   }
 
+  /**
+   * Get next message.
+   * @return next log message
+   */
   public LogMessage nextMessage() throws IOException {
     stream.mark(HEADER_SIZE);
 

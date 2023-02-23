@@ -23,6 +23,14 @@ package com.spotify.docker.client;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.MoreObjects;
 
+/** 
+ * Reference to a Docker image.
+ * Always contains the image name, optionally contains: 
+ * <ul>
+ * <li> registry name or registry url
+ * <li> tag
+ * </ul>
+ */
 public class ImageRef {
 
   private static final String DEFAULT_REGISTRY = "docker.io";
@@ -33,6 +41,11 @@ public class ImageRef {
   private final String image;
   private final String tag;
 
+  /**
+   * Construct image reference from string in [REPOSITORY[:TAG]] format.
+   * Repository and tag are optional.
+   * @param image reference string  
+   */
   public ImageRef(final String image) {
     final int lastAt = image.lastIndexOf('@');
     final int lastColon = image.lastIndexOf(':');

@@ -74,6 +74,7 @@ import static org.hamcrest.Matchers.contains;
 import static org.hamcrest.Matchers.containsInAnyOrder;
 import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.either;
+import static org.hamcrest.Matchers.emptyOrNullString;
 import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.everyItem;
 import static org.hamcrest.Matchers.greaterThan;
@@ -82,10 +83,9 @@ import static org.hamcrest.Matchers.hasItem;
 import static org.hamcrest.Matchers.hasItems;
 import static org.hamcrest.Matchers.hasKey;
 import static org.hamcrest.Matchers.hasSize;
+import static org.hamcrest.Matchers.in;
 import static org.hamcrest.Matchers.instanceOf;
 import static org.hamcrest.Matchers.is;
-import static org.hamcrest.Matchers.isEmptyOrNullString;
-import static org.hamcrest.Matchers.isIn;
 import static org.hamcrest.Matchers.lessThan;
 import static org.hamcrest.Matchers.lessThanOrEqualTo;
 import static org.hamcrest.Matchers.not;
@@ -98,7 +98,7 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotEquals;
 import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertThat;
+import static org.hamcrest.MatcherAssert.assertThat;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 import static org.junit.Assume.assumeFalse;
@@ -117,6 +117,7 @@ import com.google.common.collect.Sets;
 import com.google.common.io.BaseEncoding;
 import com.google.common.io.Resources;
 import com.google.common.util.concurrent.SettableFuture;
+import com.spotify.docker.PlatformUtil;
 import com.spotify.docker.client.DockerClient.AttachParameter;
 import com.spotify.docker.client.DockerClient.BuildParam;
 import com.spotify.docker.client.DockerClient.EventsParam;
@@ -217,7 +218,6 @@ import com.spotify.docker.client.messages.swarm.ServiceSpec;
 import com.spotify.docker.client.messages.swarm.Swarm;
 import com.spotify.docker.client.messages.swarm.SwarmInit;
 import com.spotify.docker.client.messages.swarm.SwarmSpec;
-import com.spotify.docker.client.messages.swarm.Task;
 import com.spotify.docker.client.messages.swarm.TaskDefaults;
 import com.spotify.docker.client.messages.swarm.TaskSpec;
 import com.spotify.docker.client.messages.swarm.UnlockKey;
@@ -248,7 +248,6 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.Date;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -261,8 +260,10 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.logging.Level;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 import org.apache.commons.compress.archivers.tar.TarArchiveEntry;
@@ -270,15 +271,17 @@ import org.apache.commons.compress.archivers.tar.TarArchiveInputStream;
 import org.apache.http.impl.conn.PoolingHttpClientConnectionManager;
 import org.apache.http.pool.PoolStats;
 import org.glassfish.jersey.apache.connector.ApacheClientProperties;
+import org.glassfish.jersey.logging.LoggingFeature;
+import org.glassfish.jersey.logging.LoggingFeature.Verbosity;
 import org.hamcrest.CustomTypeSafeMatcher;
 import org.hamcrest.Matcher;
 import org.hamcrest.Matchers;
 import org.junit.After;
+import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Ignore;
 import org.junit.Rule;
 import org.junit.Test;
-import org.junit.rules.ExpectedException;
 import org.junit.rules.TestName;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -297,6 +300,7 @@ public class DefaultDockerClientTest {
   private static final String BUSYBOX = "busybox";
   private static final String BUSYBOX_LATEST = BUSYBOX + ":latest";
   private static final String BUSYBOX_BUILDROOT_2013_08_1 = BUSYBOX + ":buildroot-2013.08.1";
+  private static final String BUSYBOX_1_35_0 = BUSYBOX + ":1.35.0";
   private static final String MEMCACHED = "rohan/memcached-mini";
   private static final String MEMCACHED_LATEST = MEMCACHED + ":latest";
   private static final String CIRROS_PRIVATE = "dxia/cirros-private";
@@ -309,9 +313,6 @@ public class DefaultDockerClientTest {
   private static final String AUTH_PASSWORD = System.getenv("HUB_DXIA2_PASSWORD");
 
   private static final Logger log = LoggerFactory.getLogger(DefaultDockerClientTest.class);
-
-  @Rule
-  public final ExpectedException exception = ExpectedException.none();
 
   @Rule
   public final TestName testName = new TestName();
@@ -361,7 +362,8 @@ public class DefaultDockerClientTest {
           }
         }
       } catch (DockerException e) {
-        log.warn("Ignoring DockerException in teardown", e);
+        log.warn("Ignoring DockerException in teardown: {}", e.getMessage());
+        log.debug("Stacktrace:", e);
       }
     }
 
@@ -458,40 +460,57 @@ public class DefaultDockerClientTest {
       public ContainerExit call() throws Exception {
         try {
           try {
-            sut.removeImage(BUSYBOX_BUILDROOT_2013_08_1);
-          } catch (DockerException ignored) {
+            sut.removeImage(BUSYBOX_1_35_0);
+          } catch (ImageNotFoundException e) {
+            log.debug("Caught ImageNotFoundException");
+          } catch (DockerException e) {
+            throw new RuntimeException("An unexpected exception occured.", e);
           }
-          sut.pull(BUSYBOX_BUILDROOT_2013_08_1, message -> {
+          log.info("Pull image: {}", BUSYBOX_1_35_0);
+          // NOTICE: This pull fails silently after timeout when the image does not exist.
+          sut.pull(BUSYBOX_1_35_0, message -> {
             if (!started.isDone()) {
               started.set(true);
             }
           });
           return null;
         } catch (InterruptedException e) {
+          log.debug("Task was interrupted.");
           interrupted.set(true);
           throw e;
         }
       }
     });
 
-    // Interrupt waiting thread
-    started.get();
-    executorService.shutdownNow();
+    log.debug("Interrupting waiting thread");
     try {
-      exitFuture.get();
+      started.get(15, TimeUnit.SECONDS);
+    } catch (TimeoutException e) {
+      log.error("No timely reponse from image pull request. Given image probably doesn't exist.");
+    }    
+    
+    executorService.shutdownNow();
+    
+    try {
+      log.debug("Interrupting waiting thread");
+      exitFuture.get(5, TimeUnit.SECONDS);
       fail();
     } catch (ExecutionException e) {
-      log.info("Got exception of type: {}", e.getClass(), e);
       assertThat(e.getCause(), instanceOf(InterruptedException.class));
     }
 
     // Verify that the thread was interrupted
-    assertThat(interrupted.get(), is(true));
+    assertThat(interrupted.get(5, TimeUnit.SECONDS), is(true));
   }
 
   @Test(expected = ImageNotFoundException.class)
-  @Ignore("osx")
-  public void testPullBadImage() throws Exception {
+
+  public void testPullBadImage() throws Exception {    
+    if (PlatformUtil.IS_MAC) {
+      // Sometimes? fails on Mac OS
+      // see: https://github.com/XenoAmess/docker-client/commit/4f7d2dc2a67d144b63aef626f509625d20a8fb51
+      return;
+    }
     // The Docker daemon on CircleCI won't throw ImageNotFoundException for some reason...
     assumeFalse(CIRCLECI);
     sut.pull(randomName());
@@ -583,8 +602,12 @@ public class DefaultDockerClientTest {
   }
   
   @Test
-  @Ignore("osx")
-  public void testLoad() throws Exception {
+  public void testLoad() throws Exception {  
+    if (PlatformUtil.IS_MAC) {
+      // Sometimes? fails on Mac OS
+      // see: https://github.com/XenoAmess/docker-client/commit/4f7d2dc2a67d144b63aef626f509625d20a8fb51
+      return;
+    }    
     // Ensure the local Docker instance has the busybox image so that save() will work
     sut.pull(BUSYBOX_LATEST);
 
@@ -660,7 +683,7 @@ public class DefaultDockerClientTest {
     sut.removeImage(image2);
   }
 
-  private File save(final String ... images) throws Exception {
+  private File save(final String... images) throws Exception {
     final File tmpDir = new File(System.getProperty("java.io.tmpdir"));
     assertTrue("Temp directory " + tmpDir.getAbsolutePath() + " does not exist", tmpDir.exists());
     final File imageFile = new File(tmpDir, "busybox-" + System.nanoTime() + ".tar");
@@ -710,15 +733,15 @@ public class DefaultDockerClientTest {
   @Test
   public void testVersion() throws Exception {
     final Version version = sut.version();
-    assertThat(version.apiVersion(), not(isEmptyOrNullString()));
-    assertThat(version.arch(), not(isEmptyOrNullString()));
-    assertThat(version.gitCommit(), not(isEmptyOrNullString()));
-    assertThat(version.goVersion(), not(isEmptyOrNullString()));
-    assertThat(version.kernelVersion(), not(isEmptyOrNullString()));
-    assertThat(version.os(), not(isEmptyOrNullString()));
-    assertThat(version.version(), not(isEmptyOrNullString()));
+    assertThat(version.apiVersion(), not(is(emptyOrNullString())));
+    assertThat(version.arch(), not(is(emptyOrNullString())));
+    assertThat(version.gitCommit(), not(is(emptyOrNullString())));
+    assertThat(version.goVersion(), not(is(emptyOrNullString())));
+    assertThat(version.kernelVersion(), not(is(emptyOrNullString())));
+    assertThat(version.os(), not(is(emptyOrNullString())));
+    assertThat(version.version(), not(is(emptyOrNullString())));
     if (dockerApiVersionAtLeast("1.22")) {
-      assertThat(version.buildTime(), not(isEmptyOrNullString()));
+      assertThat(version.buildTime(), not(is(emptyOrNullString())));
     }
   }
 
@@ -758,25 +781,25 @@ public class DefaultDockerClientTest {
     final Info info = sut.info();
     assertThat(info.containers(), is(anything()));
     assertThat(info.debug(), is(anything()));
-    assertThat(info.dockerRootDir(), not(isEmptyOrNullString()));
-    assertThat(info.storageDriver(), not(isEmptyOrNullString()));
+    assertThat(info.dockerRootDir(), not(is(emptyOrNullString())));
+    assertThat(info.storageDriver(), not(is(emptyOrNullString())));
     assertThat(info.driverStatus(), is(anything()));
     if (dockerApiVersionLessThan("1.23")) {
       // Execution driver was removed in 1.24 https://github.com/docker/docker/pull/24501
       // But it also shows up as "" in 1.23, and I don't know why - JF
-      assertThat(info.executionDriver(), not(isEmptyOrNullString()));
+      assertThat(info.executionDriver(), not(is(emptyOrNullString())));
     }
-    assertThat(info.id(), not(isEmptyOrNullString()));
+    assertThat(info.id(), not(is(emptyOrNullString())));
     assertThat(info.ipv4Forwarding(), is(anything()));
     assertThat(info.images(), greaterThan(-1));
-    assertThat(info.indexServerAddress(), not(isEmptyOrNullString()));
+    assertThat(info.indexServerAddress(), not(is(emptyOrNullString())));
     if (dockerApiVersionLessThan("1.23")) {
       // Init path seems to have been removed in API 1.23.
       // Still documented as of 2016-09-26, but InitPath field is not in /info - JF
-      assertThat(info.initPath(), not(isEmptyOrNullString()));
+      assertThat(info.initPath(), not(is(emptyOrNullString())));
     }
     assertThat(info.initSha1(), is(anything()));
-    assertThat(info.kernelVersion(), not(isEmptyOrNullString()));
+    assertThat(info.kernelVersion(), not(is(emptyOrNullString())));
     assertThat(info.labels(), is(anything()));
     assertThat(info.memTotal(), greaterThan(0L));
     assertThat(info.memoryLimit(), not(nullValue()));
@@ -784,8 +807,8 @@ public class DefaultDockerClientTest {
     assertThat(info.eventsListener(), is(anything()));
     assertThat(info.fileDescriptors(), is(anything()));
     assertThat(info.goroutines(), is(anything()));
-    assertThat(info.name(), not(isEmptyOrNullString()));
-    assertThat(info.operatingSystem(), not(isEmptyOrNullString()));
+    assertThat(info.name(), not(is(emptyOrNullString())));
+    assertThat(info.operatingSystem(), not(is(emptyOrNullString())));
     assertThat(info.registryConfig(), notNullValue());
     assertThat(info.registryConfig().indexConfigs(), hasKey("docker.io"));
     assertThat(info.swapLimit(), not(nullValue()));
@@ -811,23 +834,27 @@ public class DefaultDockerClientTest {
     }
 
     if (dockerApiVersionAtLeast("1.22")) {
-      assertThat(info.architecture(), not(isEmptyOrNullString()));
+      assertThat(info.architecture(), not(is(emptyOrNullString())));
       assertThat(info.containersRunning(), is(anything()));
       assertThat(info.containersStopped(), is(anything()));
       assertThat(info.containersPaused(), is(anything()));
-      assertThat(info.osType(), not(isEmptyOrNullString()));
+      assertThat(info.osType(), not(is(emptyOrNullString())));
       assertThat(info.systemStatus(), is(anything()));
     }
 
     if (dockerApiVersionAtLeast("1.23")) {
-      assertThat(info.cgroupDriver(), not(isEmptyOrNullString()));
+      assertThat(info.cgroupDriver(), not(is(emptyOrNullString())));
       assertThat(info.kernelMemory(), is(anything()));
     }
   }
 
   @Test
-  @Ignore("osx")
-  public void testRemoveImage() throws Exception {
+  public void testRemoveImage() throws Exception {  
+    if (PlatformUtil.IS_MAC) {
+      // Sometimes? fails on Mac OS
+      // see: https://github.com/XenoAmess/docker-client/commit/4f7d2dc2a67d144b63aef626f509625d20a8fb51
+      return;
+    }
     // Don't remove images on CircleCI. Their version of Docker causes failures when pulling an
     // image that shares layers with an image that has been removed. This causes tests after this
     // one to fail.
@@ -891,20 +918,20 @@ public class DefaultDockerClientTest {
     sut.pull(BUSYBOX_BUILDROOT_2013_08_1);
     final ImageInfo info = sut.inspectImage(BUSYBOX_BUILDROOT_2013_08_1);
     assertThat(info, notNullValue());
-    assertThat(info.architecture(), not(isEmptyOrNullString()));
-    assertThat(info.author(), not(isEmptyOrNullString()));
+    assertThat(info.architecture(), not(is(emptyOrNullString())));
+    assertThat(info.author(), not(is(emptyOrNullString())));
     assertThat(info.config(), notNullValue());
-    assertThat(info.container(), not(isEmptyOrNullString()));
+    assertThat(info.container(), not(is(emptyOrNullString())));
     assertThat(info.containerConfig(), notNullValue());
     assertThat(info.comment(), notNullValue());
     assertThat(info.created(), notNullValue());
-    assertThat(info.dockerVersion(), not(isEmptyOrNullString()));
-    assertThat(info.id(), not(isEmptyOrNullString()));
+    assertThat(info.dockerVersion(), not(is(emptyOrNullString())));
+    assertThat(info.id(), not(is(emptyOrNullString())));
     assertThat(info.os(), equalTo("linux"));
 
     //noinspection StatementWithEmptyBody
     if (dockerApiVersionLessThan("1.22")) {
-      assertThat(info.parent(), not(isEmptyOrNullString()));
+      assertThat(info.parent(), not(is(emptyOrNullString())));
     } else {
       // The "parent" field can be empty because of changes in
       // image storage in 1.10. See https://github.com/docker/docker/issues/19650.
@@ -1031,8 +1058,12 @@ public class DefaultDockerClientTest {
 
   @SuppressWarnings("emptyCatchBlock")
   @Test
-  @Ignore("osx")
-  public void testBuildInterruption() throws Exception {
+  public void testBuildInterruption() throws Exception {  
+    if (PlatformUtil.IS_MAC) {
+      // Sometimes? fails on Mac OS
+      // see: https://github.com/XenoAmess/docker-client/commit/4f7d2dc2a67d144b63aef626f509625d20a8fb51
+      return;
+    }
     // Wait for container on a thread
     final ExecutorService executorService = Executors.newSingleThreadExecutor();
     final SettableFuture<Boolean> started = SettableFuture.create();
@@ -1246,8 +1277,6 @@ public class DefaultDockerClientTest {
   public void testFailCopyContainer() throws Exception {
     requireDockerApiVersionAtLeast("1.24", "failCopyToContainer");
 
-    exception.expect(UnsupportedApiVersionException.class);
-
     // Pull image
     sut.pull(BUSYBOX_LATEST);
 
@@ -1259,7 +1288,10 @@ public class DefaultDockerClientTest {
     final ContainerCreation creation = sut.createContainer(config, name);
     final String id = creation.id();
 
-    sut.copyContainer(id, "/bin");
+    Assert.assertThrows(UnsupportedApiVersionException.class, () -> {
+      sut.copyContainer(id, "/bin");  
+    });
+    
   }
 
   @Test
@@ -1296,8 +1328,6 @@ public class DefaultDockerClientTest {
   public void testFailArchiveContainer() throws Exception {
     requireDockerApiVersionLessThan("1.20", "failCopyToContainer");
 
-    exception.expect(UnsupportedApiVersionException.class);
-
     // Pull image
     sut.pull(BUSYBOX_LATEST);
 
@@ -1309,7 +1339,10 @@ public class DefaultDockerClientTest {
     final ContainerCreation creation = sut.createContainer(config, name);
     final String id = creation.id();
 
-    sut.archiveContainer(id, "/bin");
+    Assert.assertThrows(UnsupportedApiVersionException.class, () -> {
+      sut.archiveContainer(id, "/bin");
+    });
+    
   }
 
   @Test
@@ -1532,9 +1565,13 @@ public class DefaultDockerClientTest {
   }
 
   @Test
-  @Ignore("osx")
   @SuppressWarnings("deprecation")
-  public void integrationTest() throws Exception {
+  public void integrationTest() throws Exception {  
+    if (PlatformUtil.IS_MAC) {
+      // Sometimes? fails on Mac OS
+      // see: https://github.com/XenoAmess/docker-client/commit/4f7d2dc2a67d144b63aef626f509625d20a8fb51
+      return;
+    }
     // Pull image
     sut.pull(BUSYBOX_LATEST);
 
@@ -1618,8 +1655,9 @@ public class DefaultDockerClientTest {
       // CircleCI doesn't let you remove a container :(
       if (!CIRCLECI) {
         // Verify that the container is gone
-        exception.expect(ContainerNotFoundException.class);
-        sut.inspectContainer(id);
+        Assert.assertThrows(ContainerNotFoundException.class, () -> {
+          sut.inspectContainer(id);
+        });        
       }
     }
   }
@@ -1894,8 +1932,12 @@ public class DefaultDockerClientTest {
   }
 
   @Test
-  @Ignore("osx")
-  public void testContainerWithCpuOptions() throws Exception {
+  public void testContainerWithCpuOptions() throws Exception {  
+    if (PlatformUtil.IS_MAC) {
+      // Sometimes? fails on Mac OS
+      // see: https://github.com/XenoAmess/docker-client/commit/4f7d2dc2a67d144b63aef626f509625d20a8fb51
+      return;
+    }
     requireDockerApiVersionAtLeast("1.18", "Container creation with cpu options");
 
     sut.pull(BUSYBOX_LATEST);
@@ -2182,8 +2224,12 @@ public class DefaultDockerClientTest {
   }
 
   @Test(timeout = 10000)
-  @Ignore("osx")
-  public void testEventStream() throws Exception {
+  public void testEventStream() throws Exception {  
+    if (PlatformUtil.IS_MAC) {
+      // Sometimes? fails on Mac OS
+      // see: https://github.com/XenoAmess/docker-client/commit/4f7d2dc2a67d144b63aef626f509625d20a8fb51
+      return;
+    }
     // In this test we open an event stream, do stuff, and check that
     // the events for the stuff we did got pushed over the stream
 
@@ -2243,8 +2289,12 @@ public class DefaultDockerClientTest {
   }
 
   @Test
-  @Ignore("osx")
-  public void testEventStreamPolling() throws Exception {
+  public void testEventStreamPolling() throws Exception {  
+    if (PlatformUtil.IS_MAC) {
+      // Sometimes? fails on Mac OS
+      // see: https://github.com/XenoAmess/docker-client/commit/4f7d2dc2a67d144b63aef626f509625d20a8fb51
+      return;
+    }
     // In this test we do stuff, then open an event stream for the
     // time window where we did the stuff, and make sure all the events
     // we did are in there
@@ -2541,13 +2591,13 @@ public class DefaultDockerClientTest {
     }
     assertNotNull(busybox);
     assertThat(busybox.virtualSize(), greaterThan(0L));
-    assertThat(busybox.created(), not(isEmptyOrNullString()));
-    assertThat(busybox.id(), not(isEmptyOrNullString()));
+    assertThat(busybox.created(), not(is(emptyOrNullString())));
+    assertThat(busybox.id(), not(is(emptyOrNullString())));
     assertThat(busybox.repoTags(), notNullValue());
     assertThat(busybox.repoTags().size(), greaterThan(0));
-    assertThat(BUSYBOX_LATEST, isIn(busybox.repoTags()));
+    assertThat(BUSYBOX_LATEST, is(in(busybox.repoTags())));
     if (dockerApiVersionLessThan("1.22")) {
-      assertThat(busybox.parentId(), not(isEmptyOrNullString()));
+      assertThat(busybox.parentId(), not(is(emptyOrNullString())));
     }
 
     final List<Image> imagesWithDigests = sut.listImages(digests());
@@ -2584,7 +2634,7 @@ public class DefaultDockerClientTest {
         repoTags.addAll(imageByName.repoTags());
       }
     }
-    assertThat(BUSYBOX_LATEST, isIn(repoTags));
+    assertThat(BUSYBOX_LATEST, is(in(repoTags)));
   }
 
   @Test
@@ -2734,8 +2784,9 @@ public class DefaultDockerClientTest {
   }
 
   @Test(expected = IllegalArgumentException.class)
+  @SuppressWarnings("unused")
   public void testInvalidExtraHosts() throws Exception {
-    final HostConfig expected = HostConfig.builder()
+    final HostConfig ignored = HostConfig.builder()
         .extraHosts("extrahost")
         .build();
   }
@@ -2802,8 +2853,8 @@ public class DefaultDockerClientTest {
     // we check that each one contains all the elements of the other.
     // Equivalent to, in math, proving two sets are one-to-one by proving
     // they are injective ("into") and surjective ("onto").
-    assertThat(actualDestinations, everyItem(isIn(expectedDestinations)));
-    assertThat(expectedDestinations, everyItem(isIn(actualDestinations)));
+    assertThat(actualDestinations, everyItem(is(in(expectedDestinations))));
+    assertThat(expectedDestinations, everyItem(is(in(actualDestinations))));
 
     // The local paths returned from ContainerInfo.volumes() are paths in the docker
     // file system. So they are not predictable (at least by me, the test writer,
@@ -2934,17 +2985,17 @@ public class DefaultDockerClientTest {
       assertThat("Did not find mount from bind object", bindObjectMount, notNullValue());
       assertThat(bindObjectMount.source(), is(bindObjectFrom));
       assertThat(bindObjectMount.destination(), is(bindObjectTo));
-      assertThat(bindObjectMount.driver(), isEmptyOrNullString());
+      assertThat(bindObjectMount.driver(), is(emptyOrNullString()));
       assertThat(bindObjectMount.rw(), is(false));
       assertThat(bindObjectMount.mode(), is(equalTo("ro")));
 
       if (dockerApiVersionAtLeast("1.25") && dockerApiVersionLessThan("1.30")) {
         // From version 1.25 to 1.29, the API behaved like this
-        assertThat(bindObjectMount.name(), isEmptyOrNullString());
-        assertThat(bindObjectMount.propagation(), isEmptyOrNullString());
+        assertThat(bindObjectMount.name(), is(emptyOrNullString()));
+        assertThat(bindObjectMount.propagation(), is(emptyOrNullString()));
       } else if (dockerApiVersionAtLeast("1.22") || dockerApiVersionAtLeast("1.30")) {
         // From version 1.22 to 1.24, and from 1.30 up, the API behaves like this
-        assertThat(bindObjectMount.name(), isEmptyOrNullString());
+        assertThat(bindObjectMount.name(), is(emptyOrNullString()));
         assertThat(bindObjectMount.propagation(), is(equalTo("rprivate")));
       } else {
         // Below version 1.22
@@ -2954,7 +3005,7 @@ public class DefaultDockerClientTest {
 
       if (dockerApiVersionAtLeast("1.26")) {
         assertThat(bindObjectMount.type(), is(equalTo("bind")));
-        assertThat(bindObjectMount.driver(), isEmptyOrNullString());
+        assertThat(bindObjectMount.driver(), is(emptyOrNullString()));
       } else {
         assertThat(bindObjectMount.type(), is(nullValue()));
         assertThat(bindObjectMount.driver(), is(nullValue()));
@@ -2969,17 +3020,17 @@ public class DefaultDockerClientTest {
       assertThat("Did not find mount from bind string", bindStringMount, notNullValue());
       assertThat(bindStringMount.source(), is(equalTo(bindStringFrom)));
       assertThat(bindStringMount.destination(), is(equalTo(bindStringTo)));
-      assertThat(bindStringMount.driver(), isEmptyOrNullString());
+      assertThat(bindStringMount.driver(), is(emptyOrNullString()));
       assertThat(bindStringMount.rw(), is(true));
       assertThat(bindStringMount.mode(), is(equalTo("")));
 
       if (dockerApiVersionAtLeast("1.25") && dockerApiVersionLessThan("1.30")) {
         // From version 1.25 to 1.29, the API behaved like this
-        assertThat(bindStringMount.name(), isEmptyOrNullString());
-        assertThat(bindStringMount.propagation(), isEmptyOrNullString());
+        assertThat(bindStringMount.name(), is(emptyOrNullString()));
+        assertThat(bindStringMount.propagation(), is(emptyOrNullString()));
       } else if (dockerApiVersionAtLeast("1.22") || dockerApiVersionAtLeast("1.30")) {
         // From version 1.22 to 1.24, and from 1.30 up, the API behaves like this
-        assertThat(bindStringMount.name(), isEmptyOrNullString());
+        assertThat(bindStringMount.name(), is(emptyOrNullString()));
         assertThat(bindStringMount.propagation(), is(equalTo("rprivate")));
       } else {
         // Below version 1.22
@@ -2989,7 +3040,7 @@ public class DefaultDockerClientTest {
 
       if (dockerApiVersionAtLeast("1.26")) {
         assertThat(bindStringMount.type(), is(equalTo("bind")));
-        assertThat(bindStringMount.driver(), isEmptyOrNullString());
+        assertThat(bindStringMount.driver(), is(emptyOrNullString()));
       } else {
         assertThat(bindStringMount.type(), is(nullValue()));
         assertThat(bindStringMount.driver(), is(nullValue()));
@@ -3012,7 +3063,7 @@ public class DefaultDockerClientTest {
       assertThat(namedVolumeMount.driver(), is(equalTo("local")));
 
       if (dockerApiVersionAtLeast("1.25")) {
-        assertThat(namedVolumeMount.propagation(), isEmptyOrNullString());
+        assertThat(namedVolumeMount.propagation(), is(emptyOrNullString()));
       } else if (dockerApiVersionAtLeast("1.22")) {
         assertThat(namedVolumeMount.propagation(), is(equalTo("rprivate")));
       } else {
@@ -3034,15 +3085,15 @@ public class DefaultDockerClientTest {
       assertThat("Did not find mount from anonymous volume", anonVolumeMount, notNullValue());
       assertThat(anonVolumeMount.source(), containsString("/" + anonVolumeMount.name() + "/"));
       assertThat(anonVolumeMount.destination(), is(equalTo(anonVolumeTo)));
-      assertThat(anonVolumeMount.mode(), isEmptyOrNullString());
+      assertThat(anonVolumeMount.mode(), is(emptyOrNullString()));
       assertThat(anonVolumeMount.rw(), is(true));
       assertThat(anonVolumeMount.mode(), is(equalTo("")));
 
-      assertThat(anonVolumeMount.name(), not(isEmptyOrNullString()));
+      assertThat(anonVolumeMount.name(), not(is(emptyOrNullString())));
       assertThat(anonVolumeMount.driver(), is(equalTo("local")));
 
       if (dockerApiVersionAtLeast("1.22")) {
-        assertThat(anonVolumeMount.propagation(), isEmptyOrNullString());
+        assertThat(anonVolumeMount.propagation(), is(emptyOrNullString()));
       } else {
         assertThat(anonVolumeMount.propagation(), is(nullValue()));
       }
@@ -3311,8 +3362,12 @@ public class DefaultDockerClientTest {
   }
 
   @Test
-  @Ignore("osx")
-  public void testLogsSince() throws Exception {
+  public void testLogsSince() throws Exception {  
+    if (PlatformUtil.IS_MAC) {
+      // Sometimes? fails on Mac OS
+      // see: https://github.com/XenoAmess/docker-client/commit/4f7d2dc2a67d144b63aef626f509625d20a8fb51
+      return;
+    }
     requireDockerApiVersionAtLeast("1.19", "/logs?since=timestamp");
 
     sut.pull(BUSYBOX_LATEST);
@@ -3395,28 +3450,23 @@ public class DefaultDockerClientTest {
 
     // Bad names
     final String oneCharacter = "a";
-    exception.expect(invalidContainerNameException(oneCharacter));
-    sut.createContainer(config, oneCharacter);
+    Assert.assertThrows(getMessageForContainer(oneCharacter), IllegalArgumentException.class, () -> {
+      sut.createContainer(config, oneCharacter);
+    });    
 
     final String invalidCharacter = "abc~";
-    exception.expect(invalidContainerNameException(invalidCharacter));
-    sut.createContainer(config, invalidCharacter);
+    Assert.assertThrows(getMessageForContainer(invalidCharacter), IllegalArgumentException.class, () -> {
+      sut.createContainer(config, invalidCharacter);
+    });
 
     final String invalidFirstCharacter = ".a";
-    exception.expect(invalidContainerNameException(invalidFirstCharacter));
-    sut.createContainer(config, invalidFirstCharacter);
+    Assert.assertThrows(getMessageForContainer(invalidFirstCharacter), IllegalArgumentException.class, () -> {
+      sut.createContainer(config, invalidFirstCharacter);
+    });
   }
-
-  private static Matcher<IllegalArgumentException>
-        invalidContainerNameException(final String containerName) {
-    final String exceptionMessage = String.format("Invalid container name: \"%s\"", containerName);
-    final String description = "for container name " + containerName;
-    return new CustomTypeSafeMatcher<IllegalArgumentException>(description) {
-      @Override
-      protected boolean matchesSafely(final IllegalArgumentException ex) {
-        return ex.getMessage().equals(exceptionMessage);
-      }
-    };
+  
+  private String getMessageForContainer(String containerName) {
+    return String.format("Invalid container name: \"%s\"", containerName);
   }
 
   @Test(expected = ContainerNotFoundException.class)
@@ -3516,14 +3566,15 @@ public class DefaultDockerClientTest {
         .build();
     final ContainerCreation container = sut.createContainer(containerConfig, randomName());
 
-    exception.expect(IllegalStateException.class);
-    exception.expectMessage(containsString("is not running"));
-    sut.execCreate(container.id(), new String[] {"ls", "-la"});
+    Throwable actualThrown = Assert.assertThrows(IllegalStateException.class, () -> {
+      sut.execCreate(container.id(), new String[] {"ls", "-la"});
 
-    sut.startContainer(container.id());
-    await().until(containerIsRunning(sut, container.id()), is(false));
+      sut.startContainer(container.id());
+      await().until(containerIsRunning(sut, container.id()), is(false));
 
-    sut.execCreate(container.id(), new String[] {"ls", "-la"});
+      sut.execCreate(container.id(), new String[] {"ls", "-la"});
+    });
+    assertThat(actualThrown.getMessage(), containsString("is not running"));
   }
 
   @Test
@@ -3643,7 +3694,7 @@ public class DefaultDockerClientTest {
     assertThat(state.id(), is(execId));
 
     final ProcessConfig processConfig = state.processConfig();
-    assertThat(processConfig.user(), isEmptyOrNullString());
+    assertThat(processConfig.user(), is(emptyOrNullString()));
   }
 
   @Test
@@ -3672,23 +3723,23 @@ public class DefaultDockerClientTest {
 
     final List<Container> created = sut.listContainers(createdParams);
     assertThat("listContainers is unexpectedly empty", created, not(empty()));
-    assertThat(containerId, isIn(containersToIds(created)));
+    assertThat(containerId, is(in(containersToIds(created))));
 
     // filters={"status":["running"]}
     sut.startContainer(containerId);
     final List<Container> running = sut.listContainers(withStatusRunning());
-    assertThat(containerId, isIn(containersToIds(running)));
+    assertThat(containerId, is(in(containersToIds(running))));
 
     // filters={"status":["paused"]}
     sut.pauseContainer(containerId);
     final List<Container> paused = sut.listContainers(withStatusPaused());
-    assertThat(containerId, isIn(containersToIds(paused)));
+    assertThat(containerId, is(in(containersToIds(paused))));
 
     // filters={"status":["exited"]}
     sut.unpauseContainer(containerId);
     sut.stopContainer(containerId, 0);
     final List<Container> allExited = sut.listContainers(allContainers(), withStatusExited());
-    assertThat(containerId, isIn(containersToIds(allExited)));
+    assertThat(containerId, is(in(containersToIds(allExited))));
 
     // filters={"status":["created","paused","exited"]}
     // Will work, i.e. multiple "status" filters are ORed
@@ -3697,7 +3748,7 @@ public class DefaultDockerClientTest {
         withStatusCreated(),
         withStatusPaused(),
         withStatusExited());
-    assertThat(containerId, isIn(containersToIds(multipleStati)));
+    assertThat(containerId, is(in(containersToIds(multipleStati))));
 
     // filters={"status":["exited"],"labels":["foo=bar"]}
     // Shows that labels play nicely with other filters
@@ -3705,7 +3756,7 @@ public class DefaultDockerClientTest {
         allContainers(),
         withStatusExited(),
         withLabel(label, labelValue));
-    assertThat(containerId, isIn(containersToIds(statusAndLabels)));
+    assertThat(containerId, is(in(containersToIds(statusAndLabels))));
 
     if (dockerApiVersionAtLeast("1.21")) {
       for (final Container c : running) {
@@ -3824,8 +3875,8 @@ public class DefaultDockerClientTest {
                                  ? imagesToShortIds(nameImages)
                                  : imagesToShortIdsAndRemoveSha256(nameImages);
 
-    assertThat(barId, isIn(nameIds));
-    assertThat(bazId, isIn(nameIds));
+    assertThat(barId, is(in(nameIds)));
+    assertThat(bazId, is(in(nameIds)));
 
     // Check that the first image is listed when we filter with a "foo=bar" label
     final List<Image> barImages = sut.listImages(
@@ -3833,7 +3884,7 @@ public class DefaultDockerClientTest {
     final List<String> barIds = dockerApiVersionLessThan("1.22")
                                 ? imagesToShortIds(barImages)
                                 : imagesToShortIdsAndRemoveSha256(barImages);
-    assertThat(barId, isIn(barIds));
+    assertThat(barId, is(in(barIds)));
 
     // Check that we find the first image again when searching with the full
     // set of labels in a Map
@@ -3843,7 +3894,7 @@ public class DefaultDockerClientTest {
     final List<String> barIds2 = dockerApiVersionLessThan("1.22")
                                  ? imagesToShortIds(barImages2)
                                  : imagesToShortIdsAndRemoveSha256(barImages2);
-    assertThat(barId, isIn(barIds2));
+    assertThat(barId, is(in(barIds2)));
 
     // Check that the second image is listed when we filter with a "foo=baz" label
     final List<Image> bazImages = sut.listImages(
@@ -3851,7 +3902,7 @@ public class DefaultDockerClientTest {
     final List<String> bazIds = dockerApiVersionLessThan("1.22")
                                 ? imagesToShortIds(bazImages)
                                 : imagesToShortIdsAndRemoveSha256(bazImages);
-    assertThat(bazId, isIn(bazIds));
+    assertThat(bazId, is(in(bazIds)));
 
     // Check that no containers are listed when we filter with a "foo=qux" label
     final List<Image> quxImages = sut.listImages(
@@ -3951,9 +4002,11 @@ public class DefaultDockerClientTest {
     }
 
     sut.removeNetwork(network.id());
-
-    exception.expect(NetworkNotFoundException.class);
-    sut.inspectNetwork(network.id());
+    final String networkId = network.id();
+    
+    Assert.assertThrows(NetworkNotFoundException.class, () -> {
+      sut.inspectNetwork(networkId);
+    });
 
   }
   
@@ -4210,7 +4263,7 @@ public class DefaultDockerClientTest {
       assertThat(attachedNetwork.globalIPv6Address(), is(notNullValue()));
       assertThat(attachedNetwork.globalIPv6PrefixLen(), greaterThanOrEqualTo(0));
       assertThat(attachedNetwork.aliases(), is(notNullValue()));
-      assertThat(dummyAlias, isIn(attachedNetwork.aliases()));
+      assertThat(dummyAlias, is(in(attachedNetwork.aliases())));
 
       sut.disconnectFromNetwork(containerCreation.id(), networkCreation.id());
       network = sut.inspectNetwork(networkCreation.id());
@@ -4335,7 +4388,7 @@ public class DefaultDockerClientTest {
 
     final ContainerChange expected = ContainerChange.create("/tmp/foo.txt", 1);
 
-    assertThat(expected, isIn(sut.inspectContainerChanges(id)));
+    assertThat(expected, is(in(sut.inspectContainerChanges(id))));
   }
 
   @Test
@@ -4394,12 +4447,12 @@ public class DefaultDockerClientTest {
     assertThat(imageHistoryList, hasSize(2));
 
     final ImageHistory busyboxHistory = imageHistoryList.get(0);
-    assertThat(busyboxHistory.id(), not(isEmptyOrNullString()));
+    assertThat(busyboxHistory.id(), not(is(emptyOrNullString())));
     assertNotNull(busyboxHistory.created());
     assertThat(busyboxHistory.createdBy(), startsWith("/bin/sh -c #(nop)"));
-    assertThat(BUSYBOX_LATEST, isIn(busyboxHistory.tags()));
+    assertThat(BUSYBOX_LATEST, is(in(busyboxHistory.tags())));
     assertEquals(0L, busyboxHistory.size().longValue());
-    assertThat(busyboxHistory.comment(), isEmptyOrNullString());
+    assertThat(busyboxHistory.comment(), is(emptyOrNullString()));
   }
 
   @Test
@@ -4456,20 +4509,10 @@ public class DefaultDockerClientTest {
 
     final String badVolumeName = "this-is-a-very-unlikely-volume-name";
 
-    exception.expect(VolumeNotFoundException.class);
-    exception.expect(volumeNotFoundExceptionWithName(badVolumeName));
-    sut.inspectVolume(badVolumeName);
-  }
-
-  private static Matcher<VolumeNotFoundException> volumeNotFoundExceptionWithName(
-      final String volumeName) {
-    final String description = "for volume name " + volumeName;
-    return new CustomTypeSafeMatcher<VolumeNotFoundException>(description) {
-      @Override
-      protected boolean matchesSafely(final VolumeNotFoundException ex) {
-        return ex.getVolumeName().equals(volumeName);
-      }
-    };
+    Throwable actualThrown = Assert.assertThrows(VolumeNotFoundException.class, () -> {
+      sut.inspectVolume(badVolumeName);
+    });
+    assertThat(((VolumeNotFoundException) actualThrown).getVolumeName(), equalTo(badVolumeName));
   }
 
   @Test
@@ -4485,7 +4528,7 @@ public class DefaultDockerClientTest {
         log.warn(warning);
       }
     }
-    assertThat(volume, isIn(volumeList.volumes()));
+    assertThat(volume, is(in(volumeList.volumes())));
 
     final VolumeList volumeListWithDangling = sut.listVolumes(dangling());
     if (volumeListWithDangling.warnings() != null
@@ -4494,7 +4537,7 @@ public class DefaultDockerClientTest {
         log.warn(warning);
       }
     }
-    assertThat(volume, isIn(volumeListWithDangling.volumes()));
+    assertThat(volume, is(in(volumeListWithDangling.volumes())));
 
     if (dockerApiVersionAtLeast("1.24")) {
       final VolumeList volumeListByName = sut.listVolumes(name(volumeName));
@@ -4504,7 +4547,7 @@ public class DefaultDockerClientTest {
           log.warn(warning);
         }
       }
-      assertThat(volume, isIn(volumeListByName.volumes()));
+      assertThat(volume, is(in(volumeListByName.volumes())));
 
       final VolumeList volumeListByDriver = sut.listVolumes(driver(volumeDriver));
       if (volumeListByDriver.warnings() != null
@@ -4513,7 +4556,7 @@ public class DefaultDockerClientTest {
           log.warn(warning);
         }
       }
-      assertThat(volume, isIn(volumeListByDriver.volumes()));
+      assertThat(volume, is(in(volumeListByDriver.volumes())));
     }
 
     if (dockerApiVersionAtLeast("1.24")) {
@@ -4532,9 +4575,11 @@ public class DefaultDockerClientTest {
     sut.removeVolume(volume1);
 
     // Remove non-existent volume
-    exception.expect(VolumeNotFoundException.class);
-    exception.expect(volumeNotFoundExceptionWithName(volume1.name()));
-    sut.removeVolume(volume1);
+    Throwable actualThrown = Assert.assertThrows(VolumeNotFoundException.class, () -> {
+      sut.removeVolume(volume1);
+    });
+    assertThat(((VolumeNotFoundException) actualThrown).getVolumeName(), equalTo(volume1.name()));
+    
 
     // Create a volume, assign it to a container, and try to remove it.
     // Should get a ConflictException.
@@ -4543,13 +4588,16 @@ public class DefaultDockerClientTest {
         .binds(Bind.from(volume2).to("/tmp").build())
         .build();
     final ContainerConfig config = ContainerConfig.builder()
-        .image(BUSYBOX)
+        .image(BUSYBOX_LATEST)
         .hostConfig(hostConfig)
         .build();
+    // ensure busybox image is available
+    sut.pull(config.image(), message -> {log.debug("pull status: {}", message.status());});
     final ContainerCreation container = sut.createContainer(config, randomName());
 
-    exception.expect(ConflictException.class);
-    sut.removeVolume(volume2);
+    Assert.assertThrows(ConflictException.class, () -> {
+      sut.removeVolume(volume2);
+    });
 
     // Clean up
     sut.removeContainer(container.id());
@@ -4799,8 +4847,9 @@ public class DefaultDockerClientTest {
     await().until(containerIsRunning(sut, container.id()), is(false));
 
     // A ContainerNotFoundException should be thrown since the container is removed when it stops
-    exception.expect(ContainerNotFoundException.class);
-    sut.inspectContainer(container.id());
+    Assert.assertThrows(ContainerNotFoundException.class, () -> {
+      sut.inspectContainer(container.id());
+    });
   }
 
   @Test
@@ -4810,9 +4859,9 @@ public class DefaultDockerClientTest {
     final Swarm swarm = sut.inspectSwarm();
     assertThat(swarm.createdAt(), is(notNullValue()));
     assertThat(swarm.updatedAt(), is(notNullValue()));
-    assertThat(swarm.id(), is(not(isEmptyOrNullString())));
-    assertThat(swarm.joinTokens().worker(), is(not(isEmptyOrNullString())));
-    assertThat(swarm.joinTokens().manager(), is(not(isEmptyOrNullString())));
+    assertThat(swarm.id(), is(not(is(emptyOrNullString()))));
+    assertThat(swarm.joinTokens().worker(), is(not(is(emptyOrNullString()))));
+    assertThat(swarm.joinTokens().manager(), is(not(is(emptyOrNullString()))));
   }
 
   @Test
@@ -5529,8 +5578,8 @@ public class DefaultDockerClientTest {
     assertThat(specs, notNullValue());
     assertThat(specs.name(), is(anything())); // Can be null if not set
     assertThat(specs.labels(), is(anything())); // Can be null if not set
-    assertThat(specs.role(), isIn(new String [] {"manager", "worker"}));
-    assertThat(specs.availability(), isIn(new String [] {"active", "pause", "drain"}));
+    assertThat(specs.role(), is(in(new String [] {"manager", "worker"})));
+    assertThat(specs.availability(), is(in(new String [] {"active", "pause", "drain"})));
     
     NodeDescription desc = nut.description();
     assertThat(desc.hostname(), allOf(notNullValue(), not("")));

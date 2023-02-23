@@ -27,15 +27,11 @@ import com.fasterxml.jackson.annotation.JsonAutoDetect;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.auto.value.AutoValue;
-import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.MoreObjects;
 import com.google.common.io.BaseEncoding;
 import com.spotify.docker.client.DockerConfigReader;
 import java.io.IOException;
-import java.io.UnsupportedEncodingException;
 import java.nio.charset.StandardCharsets;
-import java.nio.file.Path;
-import java.util.Base64;
 import javax.annotation.Nullable;
 
 /**
@@ -113,7 +109,6 @@ public abstract class RegistryAuth {
    * @return a {@link Builder}
    * @throws IOException when we can't parse the docker config file
    */
-  @SuppressWarnings("unused")
   public static Builder fromDockerConfig(final String serverAddress) throws IOException {
     DockerConfigReader dockerCfgReader = new DockerConfigReader();
     return dockerCfgReader

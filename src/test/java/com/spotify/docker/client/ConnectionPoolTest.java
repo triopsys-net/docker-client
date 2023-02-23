@@ -20,8 +20,7 @@
 
 package com.spotify.docker.client;
 
-import static java.lang.Long.toHexString;
-
+import com.spotify.docker.PlatformUtil;
 import com.spotify.docker.client.exceptions.DockerCertificateException;
 import com.spotify.docker.client.exceptions.DockerException;
 import java.util.ArrayList;
@@ -30,14 +29,11 @@ import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
-import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.TimeUnit;
 import org.hamcrest.MatcherAssert;
 import org.hamcrest.Matchers;
-import org.junit.Ignore;
 import org.junit.Rule;
 import org.junit.Test;
-import org.junit.rules.ExpectedException;
 import org.junit.rules.TestName;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -56,12 +52,7 @@ public class ConnectionPoolTest {
   private static final Logger log = LoggerFactory.getLogger(ConnectionPoolTest.class);
 
   @Rule
-  public final ExpectedException exception = ExpectedException.none();
-
-  @Rule
   public final TestName testName = new TestName();
-
-  private final String nameTag = toHexString(ThreadLocalRandom.current().nextLong());
 
   /**
    * Checks that running a parallel operation does not break DefaultDockerClient.
@@ -70,8 +61,13 @@ public class ConnectionPoolTest {
    * @throws Exception on error.
    */
   @Test
-  @Ignore("osx")
-  public void testParallelOperation() throws Exception {
+  public void testParallelOperation() throws Exception {  
+    if (PlatformUtil.IS_MAC) {
+      // Sometimes? fails on Mac OS
+      // see: https://github.com/XenoAmess/docker-client/commit/4f7d2dc2a67d144b63aef626f509625d20a8fb51
+      return;
+    }
+      
     final ExecutorService executor = Executors.newFixedThreadPool(5);
     List<Future<Exception>> tasks = new ArrayList<>(20);
     for (int i = 0; i < 20; i++) {

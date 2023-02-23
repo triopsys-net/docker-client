@@ -40,6 +40,10 @@ public class EventReader implements Closeable {
     this.objectMapper = objectMapper;
   }
 
+  /**
+   * Get next message.
+   * @return next event message
+   */
   public Event nextMessage() throws IOException {
     if (this.parser == null) {
       this.parser = objectMapper.getFactory().createParser(response.getEntity().getContent());

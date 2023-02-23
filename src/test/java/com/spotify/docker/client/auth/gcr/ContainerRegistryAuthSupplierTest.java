@@ -26,7 +26,7 @@ import static org.hamcrest.Matchers.everyItem;
 import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.not;
 import static org.hamcrest.Matchers.nullValue;
-import static org.junit.Assert.assertThat;
+import static org.hamcrest.MatcherAssert.assertThat;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
@@ -46,14 +46,10 @@ import java.util.concurrent.TimeUnit;
 import org.hamcrest.FeatureMatcher;
 import org.hamcrest.Matcher;
 import org.joda.time.DateTime;
-import org.junit.Rule;
+import org.junit.Assert;
 import org.junit.Test;
-import org.junit.rules.ExpectedException;
 
 public class ContainerRegistryAuthSupplierTest {
-
-  @Rule
-  public final ExpectedException exception = ExpectedException.none();
 
   private final DateTime expiration = new DateTime(2017, 5, 23, 16, 25);
   private final String tokenValue = "abc123.foobar";
@@ -151,10 +147,10 @@ public class ContainerRegistryAuthSupplierTest {
     doThrow(ex).when(refresher).refresh(credentials);
 
     // the exception should propagate up
-    exception.expect(DockerException.class);
-    exception.expectCause(is(ex));
-
-    supplier.authFor("gcr.io/example/foobar:1.2.3");
+    Throwable actualThrowable = Assert.assertThrows(DockerException.class, () -> {
+      supplier.authFor("gcr.io/example/foobar:1.2.3");
+    });
+    assertThat(actualThrowable.getCause(), is(ex));
   }
 
   @Test

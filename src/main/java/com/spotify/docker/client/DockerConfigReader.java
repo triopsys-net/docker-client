@@ -39,6 +39,7 @@ import java.util.Arrays;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -252,6 +253,11 @@ public class DockerConfigReader {
     return null;
   }
 
+  /**
+   * Get configuration path from configuration (environment, system property) or 
+   * return the default location.
+   * @return config path 
+   */
   public Path defaultConfigPath() {
     if (DockerHost.configPathFromEnv() != null) {
       final Path dockerConfig = Paths.get(DockerHost.configPathFromEnv(), "config.json");

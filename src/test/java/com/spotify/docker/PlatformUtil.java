@@ -25,6 +25,9 @@ public class PlatformUtil {
 
   public static final boolean IS_WINDOWS = 
       System.getProperty("os.name").toLowerCase().startsWith("windows");
+      
+  public static final boolean IS_MAC = 
+      System.getProperty("os.name").toLowerCase().startsWith("mac os");
   
   private PlatformUtil() {
     // prevent instantiation

@@ -22,7 +22,8 @@ package com.spotify.docker.client;
 
 import static org.hamcrest.Matchers.describedAs;
 import static org.hamcrest.Matchers.is;
-import static org.junit.Assert.assertThat;
+import static org.junit.Assert.assertThrows;
+import static org.hamcrest.MatcherAssert.assertThat;
 
 import com.google.common.jimfs.Configuration;
 import com.google.common.jimfs.Jimfs;
@@ -34,9 +35,7 @@ import java.util.Arrays;
 import java.util.regex.PatternSyntaxException;
 
 import org.junit.Before;
-import org.junit.Rule;
 import org.junit.Test;
-import org.junit.rules.ExpectedException;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 import org.junit.runners.Parameterized.Parameter;
@@ -108,9 +107,6 @@ public class CompressedDirectoryMatchFilepathTest {
         });
   }
 
-  @Rule
-  public final ExpectedException expectedException = ExpectedException.none();
-
   @Parameter(0)
   public String pattern;
 
@@ -133,9 +129,15 @@ public class CompressedDirectoryMatchFilepathTest {
   @Test
   public void testMatchFilepath() {
     if (exception != null) {
-      expectedException.expect(exception);
-    }
-
+      assertThrows(exception, () -> {
+        performTest();
+      });
+    } else {
+      performTest();
+    }    
+  }
+  
+  private void performTest() {
     final Path path = fs.getPath(pathString);
     final boolean result = CompressedDirectory.goPathMatcher(fs, pattern).matches(path);
 

@@ -40,6 +40,10 @@ public class NpipeConnectionSocketFactory implements ConnectionSocketFactory {
 
   private File socketFile;
 
+  /**
+   * Create from URI, should start with "npipe://localhost".
+   * Npipe URI's not starting with localhost are modified to start with "npipe://localhost".
+   */
   public NpipeConnectionSocketFactory(final URI socketUri) {
     super();
 
@@ -50,6 +54,12 @@ public class NpipeConnectionSocketFactory implements ConnectionSocketFactory {
     this.socketFile = new File(filename);
   }
 
+  /**
+   * Convert uri when needed.
+   * @param uri input uri
+   * @return when input uri has npipe scheme, returns "npipe://localhost:80" otherwise
+   *         returns the input uri.
+   */
   public static URI sanitizeUri(final URI uri) {
     if (uri.getScheme().equals("npipe")) {
       return URI.create("npipe://localhost:80");

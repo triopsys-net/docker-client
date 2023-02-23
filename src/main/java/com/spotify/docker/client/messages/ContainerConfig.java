@@ -31,10 +31,6 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 
-import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
-
-import java.util.Collections;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -277,9 +273,11 @@ public abstract class ContainerConfig {
 
     /**
      * @deprecated As of 8.10.0, use {@link #volumes(Set)} or
-     *             {@link #volumes(String...)}.
+     *             {@link #volumes(String...)} (Only the keys
+     *             of the given map are used.)
      */
     @Deprecated
+    @SuppressWarnings("rawtypes")
     public Builder volumes(final Map<String, Map> volumes) {
       this.volumes(volumes.keySet());
       return this;

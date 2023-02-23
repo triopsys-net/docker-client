@@ -36,14 +36,9 @@ import org.apache.http.HttpHost;
 import org.apache.http.protocol.HttpContext;
 import org.hamcrest.core.IsInstanceOf;
 import org.junit.Before;
-import org.junit.Rule;
 import org.junit.Test;
-import org.junit.rules.ExpectedException;
 
 public class UnixConnectionSocketFactoryTest {
-
-  @Rule
-  public ExpectedException exception = ExpectedException.none();
 
   private UnixConnectionSocketFactory sut;
 

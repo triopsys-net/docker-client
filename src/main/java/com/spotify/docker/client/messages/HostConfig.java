@@ -323,7 +323,7 @@ public abstract class HostConfig {
         .dnsOptions(dnsOptions)
         .dnsSearch(dnsSearch)
         .extraHosts(extraHosts)
-        .groupAdd( groupAdd )
+        .groupAdd(groupAdd)
         .volumesFrom(volumesFrom)
         .capAdd(capAdd)
         .capDrop(capDrop)

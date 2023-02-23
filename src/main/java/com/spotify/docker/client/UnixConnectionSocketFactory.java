@@ -46,6 +46,10 @@ public class UnixConnectionSocketFactory implements ConnectionSocketFactory {
 
   private File socketFile;
 
+  /**
+   * Create from URI, should start with "unix://localhost".
+   * Unix URI's not starting with localhost are modified to start with "unix://localhost".
+   */
   public UnixConnectionSocketFactory(final URI socketUri) {
     super();
 
@@ -56,6 +60,12 @@ public class UnixConnectionSocketFactory implements ConnectionSocketFactory {
     this.socketFile = new File(filename);
   }
 
+  /**
+   * Convert uri when needed.
+   * @param uri input uri
+   * @return when input uri has unix scheme, returns "unix://localhost:80" otherwise
+   *         returns the input uri.
+   */
   public static URI sanitizeUri(final URI uri) {
     if (uri.getScheme().equals("unix")) {
       return URI.create("unix://localhost:80");

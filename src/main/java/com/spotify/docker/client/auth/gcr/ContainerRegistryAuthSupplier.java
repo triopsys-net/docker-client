@@ -158,6 +158,9 @@ public class ContainerRegistryAuthSupplier implements RegistryAuthSupplier {
       return this;
     }
 
+    /**
+     * Build ContainerRegistryAuthSupplier.
+     */
     public ContainerRegistryAuthSupplier build() {
       final GoogleCredentials credentials = this.credentials.createScoped(scopes);
 
