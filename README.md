@@ -1,11 +1,11 @@
 # Docker Client
 
-[![codecov](https://codecov.io/github/XenoAmess/docker-client/coverage.svg?branch=master)](https://codecov.io/github/XenoAmess/docker-client?branch=master)
-[![Maven Central](https://img.shields.io/maven-central/v/com.xenoamess.docker/docker-client.svg)](https://search.maven.org/#search%7Cga%7C1%7Cg%3A%22com.xenoamess.docker%22%20docker-client)
-[![License](https://img.shields.io/github/license/XenoAmess/docker-client.svg)](LICENSE)
+[![Maven Central](https://img.shields.io/maven-central/v/net.triopsys.docker/docker-client.svg)](https://search.maven.org/#search%7Cga%7C1%7Cg%3A%22net.triopsys.docker%22%20docker-client)
+[![License](https://img.shields.io/github/license/net-triopsys/docker-client.svg)](LICENSE)
 
 This is a [Docker](https://github.com/docker/docker) client written in Java.
-It is used in many critical production systems at Spotify.
+This software was created by Spotify and maintained by among others [Xenoamess](https://github.com/XenoAmess/docker-client) after they stopped development.
+The primary goal of TriOpSys for this software is to keep it up-to-date and secure for use as a dependency of the [dockerfile-maven-plugin](https://github.com/triopsys-net/dockerfile-maven).
 
 * [Version compatibility](#version-compatibility)
 * [Download](#download)
@@ -19,9 +19,8 @@ It is used in many critical production systems at Spotify.
 * [User Manual](https://github.com/spotify/docker-client/blob/master/docs/user_manual.md)
 
 ## Version compatibility
-docker-client is built and tested against the six most recent minor releases of Docker.
-Right now these are 17.03.1~ce - 17.12.1~ce (specifically the ones [here][1]).
-We upload the artifact tested on Docker 17.12.1~ce.
+docker-client is built and tested against the most recent releases of Docker.
+Right now these are 20.x and 23.x (specifically the ones [here][1]).
 See [Docker docs on the mapping between Docker version and API version][3].
 
 ## Download
@@ -30,12 +29,11 @@ Download the latest JAR or grab [via Maven][maven-search].
 
 ```xml
 <dependency>
-  <groupId>com.xenoamess.docker</groupId>
+  <groupId>net.triopsys.docker</groupId>
   <artifactId>docker-client</artifactId>
   <version>LATEST-VERSION</version>
 </dependency>
 ```
-
 
 ## Usage Example
 
@@ -103,17 +101,14 @@ If you're looking for how to build and develop it, keep reading.
 
 ## Prerequisites
 
-docker-client should be buildable on any platform with Docker 1.6+, JDK8+, and a recent version of
+docker-client should be buildable on any platform with Docker 20+, JDK8+, and a recent version of
 Maven 3.
 
 ### A note on using Docker for Mac
 
 If you are using Docker for Mac and `DefaultDockerClient.fromEnv()`, it might not be clear
 what value to use for the `DOCKER_HOST` environment variable. The value you should use is
-`DOCKER_HOST=unix:///var/run/docker.sock`, at least as of version 1.11.1-beta11.
-
-As of version 4.0.8 of docker-client, `DefaultDockerClient.fromEnv()` uses
-`unix:///var/run/docker.sock` on OS X by default.
+`DOCKER_HOST=unix:///var/run/docker.sock`.
 
 ## Testing
 
@@ -146,9 +141,9 @@ Standard:
 
 ```xml
 <dependency>
-  <groupId>com.spotify</groupId>
+  <groupId>net.triopsys.docker</groupId>
   <artifactId>docker-client</artifactId>
-  <version>3.5.12</version>
+  <version>8.18.4</version>
 </dependency>
 ```
 
@@ -156,26 +151,26 @@ Shaded:
 
 ```xml
 <dependency>
-  <groupId>com.spotify</groupId>
+  <groupId>net.triopsys.docker</groupId>
   <artifactId>docker-client</artifactId>
   <classifier>shaded</classifier>
-  <version>3.5.12</version>
+  <version>8.18.4</version>
 </dependency>
 ```
 
 **This is particularly important if you use Jersey 1.x in your project. To avoid conflicts with
 docker-client and Jersey 2.x, you will need to explicitly specify the shaded version above.**
 
-
-  [1]: https://travis-ci.org/spotify/docker-client
-  [2]: docs/user_manual.md
-  [3]: https://docs.docker.com/engine/api/v1.27/#section/Versioning
-
-
 ## Code of conduct
 
 This project adheres to the [Open Code of Conduct][code-of-conduct]. By participating, you are
 expected to honor this code.
 
-  [code-of-conduct]: https://github.com/XenoAmess/code-of-conduct/blob/master/code-of-conduct.md
-  [maven-search]: https://search.maven.org/#search%7Cga%7C1%7Cg%3A%22com.xenoamess.docker%22%20docker-client
+  [code-of-conduct]: https://github.com/spotify/code-of-conduct/blob/master/code-of-conduct.md
+  [maven-search]: https://search.maven.org/#search%7Cga%7C1%7Cg%3A%22net.triopsys.docker%22%20docker-client
+
+<!-- Footnotes -->
+  [1]: https://github.com/triopsys-net/docker-client/blob/master/.github/workflows/build.yml
+  [2]: docs/user_manual.md
+  [3]: https://docs.docker.com/engine/api/v1.27/#section/Versioning
+  
