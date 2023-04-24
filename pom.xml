@@ -25,7 +25,7 @@
   </scm>
 
   <properties>
-    <jackson.version>2.14.2</jackson.version>
+    <jackson.version>2.15.0</jackson.version>
     <!-- Used for deploying artifacts/packages to Github: -->
     <repo.owner.id>triopsys-net</repo.owner.id>
   </properties>
