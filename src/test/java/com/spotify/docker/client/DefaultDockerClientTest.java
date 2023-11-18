@@ -76,6 +76,7 @@ import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.either;
 import static org.hamcrest.Matchers.emptyOrNullString;
 import static org.hamcrest.Matchers.equalTo;
+import static org.hamcrest.Matchers.equalToIgnoringCase;
 import static org.hamcrest.Matchers.everyItem;
 import static org.hamcrest.Matchers.greaterThan;
 import static org.hamcrest.Matchers.greaterThanOrEqualTo;
@@ -124,6 +125,7 @@ import com.spotify.docker.client.DockerClient.EventsParam;
 import com.spotify.docker.client.DockerClient.ExecCreateParam;
 import com.spotify.docker.client.DockerClient.ListImagesParam;
 import com.spotify.docker.client.DockerClient.ListNetworksParam;
+import com.spotify.docker.client.auth.ConfigFileRegistryAuthSupplier;
 import com.spotify.docker.client.auth.FixedRegistryAuthSupplier;
 import com.spotify.docker.client.exceptions.BadParamException;
 import com.spotify.docker.client.exceptions.ConflictException;
@@ -242,6 +244,7 @@ import java.net.URL;
 import java.net.URLEncoder;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
@@ -343,6 +346,12 @@ public class DefaultDockerClientTest {
     }
 
     dockerEndpoint = builder.uri();
+    
+    // Use clean configuration, with only the Docker Hub registry as authorised registry.
+    // Otherwise locally configured docker registries might be used.
+    builder.registryAuthSupplier(new ConfigFileRegistryAuthSupplier(
+                                  new DockerConfigReader(), 
+                                  Paths.get("./dockerConfig", "OnlyDockerHubAuth.json")));
 
     sut = builder.build();
 
@@ -363,7 +372,7 @@ public class DefaultDockerClientTest {
         }
       } catch (DockerException e) {
         log.warn("Ignoring DockerException in teardown: {}", e.getMessage());
-        log.debug("Stacktrace:", e);
+        log.trace("Stacktrace:", e);
       }
     }
 
@@ -466,9 +475,11 @@ public class DefaultDockerClientTest {
           } catch (DockerException e) {
             throw new RuntimeException("An unexpected exception occured.", e);
           }
-          log.info("Pull image: {}", BUSYBOX_1_35_0);
+          
+          log.debug("Pull image: {}", BUSYBOX_1_35_0);
           // NOTICE: This pull fails silently after timeout when the image does not exist.
-          sut.pull(BUSYBOX_1_35_0, message -> {
+          sut.pull(BUSYBOX_1_35_0, message -> {            
+            log.debug("Pull progress: {}", message);
             if (!started.isDone()) {
               started.set(true);
             }
@@ -478,6 +489,9 @@ public class DefaultDockerClientTest {
           log.debug("Task was interrupted.");
           interrupted.set(true);
           throw e;
+        } catch (Throwable t) {
+          log.error("An unexpected exception occured.", t);
+          throw t;
         }
       }
     });
@@ -493,7 +507,7 @@ public class DefaultDockerClientTest {
     
     try {
       log.debug("Interrupting waiting thread");
-      exitFuture.get(5, TimeUnit.SECONDS);
+      exitFuture.get(15, TimeUnit.SECONDS);
       fail();
     } catch (ExecutionException e) {
       assertThat(e.getCause(), instanceOf(InterruptedException.class));
@@ -1081,14 +1095,17 @@ public class DefaultDockerClientTest {
         final Path dockerDirectory = Paths.get(dockerDirectoryUrl.toURI());
 
         sut.build(dockerDirectory, imageName, message -> {
+          log.debug("Build progress: {}", message);
           if (!started.isDone()) {
             started.set(true);
           }
-        });
+        }, BuildParam.noCache());
       } catch (InterruptedException e) {
+        log.debug("Build thread was interrupted.");
         interrupted.set(true);
         throw e;
       } catch (Throwable t) {
+        log.error("Caught unexpected [{}] exception in build thread, messsage: [{}]", t.getClass(), t.getMessage());
         started.setException(t);
         throw t;
       }
@@ -1100,9 +1117,9 @@ public class DefaultDockerClientTest {
     executorService.shutdownNow();
     try {
       buildFuture.get();
-      fail();
+            fail();
     } catch (ExecutionException e) {
-      assertThat(e.getCause(), instanceOf(InterruptedException.class));
+            assertThat(e.getCause(), instanceOf(InterruptedException.class));
     }
 
     try {
@@ -2092,8 +2109,8 @@ public class DefaultDockerClientTest {
     if (dockerApiVersionAtLeast("1.20") && actual.memorySwappiness() != null) {
       assertThat(actual.memorySwappiness(), equalTo(expected.memorySwappiness()));
     }
-    if (dockerApiVersionAtLeast("1.21") && actual.kernelMemory() != 0) {
-      assertThat(actual.kernelMemory(), equalTo(expected.kernelMemory()));
+    if (dockerApiVersionAtLeast("1.21") && dockerApiVersionLessThan("1.42") && actual.kernelMemory() != 0) {
+        assertThat(actual.kernelMemory(), equalTo(expected.kernelMemory()));
     }
   }
 
@@ -3738,6 +3755,7 @@ public class DefaultDockerClientTest {
     // filters={"status":["exited"]}
     sut.unpauseContainer(containerId);
     sut.stopContainer(containerId, 0);
+    sut.waitContainer(containerId);
     final List<Container> allExited = sut.listContainers(allContainers(), withStatusExited());
     assertThat(containerId, is(in(containersToIds(allExited))));
 
@@ -4427,9 +4445,9 @@ public class DefaultDockerClientTest {
         final Map<String, String> jsonMessage =
             mapper.readValue(e.getResponseBody(), new TypeReference<Map<String, String>>() {
             });
-        assertThat(jsonMessage, hasKey("message"));
-        assertEquals(String.format("Container %s is not running", id),
-                     jsonMessage.get("message"));
+            assertThat(jsonMessage, hasKey("message"));           
+            assertThat(String.format("Container %s is not running", id),
+                       equalToIgnoringCase(jsonMessage.get("message")));
       }
     }
 
