@@ -9,7 +9,7 @@
 
   <groupId>com.xenoamess.docker</groupId>
   <artifactId>docker-client</artifactId>
-  <version>8.18.4-SNAPSHOT</version>
+  <version>8.19.0-SNAPSHOT</version>
   <packaging>jar</packaging>
 
   <name>docker-client</name>
