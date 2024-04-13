@@ -37,7 +37,7 @@ jobs:
             ${{ runner.os }}-maven-
 
       - name: Setup Maven Action
-        uses: s4u/setup-maven-action@v1.7.0
+        uses: s4u/setup-maven-action@v1.12.0
         with:
           checkout-fetch-depth: 0
           java-version: 11
@@ -85,7 +85,7 @@ jobs:
         if:  ${{ github.ref != 'refs/heads/master' }} # use != master to also easily support deploying other (feature) branches
 
       - name: Setup Maven Action
-        uses: s4u/setup-maven-action@v1.7.0
+        uses: s4u/setup-maven-action@v1.12.0
         with:
           checkout-fetch-depth: 0
           java-version: 11
